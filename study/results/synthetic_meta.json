@@ -1,0 +1,16 @@
+{
+  "dataset": "synthetic",
+  "probes": 60,
+  "gallery": 60,
+  "conditions": 47,
+  "variants": [
+    "rigid",
+    "dcm",
+    "dcm_rtps"
+  ],
+  "wall_s": 1183.7,
+  "workers": 31,
+  "opencv": "5.0.0",
+  "machine": "AMD64",
+  "python": "3.11.9"
+}

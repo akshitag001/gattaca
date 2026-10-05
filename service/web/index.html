@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GATTACA — how much fingerprint does your photo leak?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0908; --bg2:#0f0d0b; --panel:#14120f; --panel2:#1b1813;
+    --ink:#f5f0e6; --muted:#9a9184; --dim:#6b6358; --line:#2a251e;
+    --accent:#e8a33d; --accent2:#c9772a; --amber:#e8a33d;
+    --high:#d9513a; --med:#dba12c; --low:#7e9a4e;
+    --r:18px; --maxw:1180px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       -webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .serif{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-weight:400}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
+  a{color:inherit}
+  /* cursor glow */
+  #glow{position:fixed;width:520px;height:520px;border-radius:50%;pointer-events:none;z-index:0;
+        background:radial-gradient(circle,rgba(232,163,61,.12),rgba(201,119,42,.06) 40%,transparent 70%);
+        transform:translate(-50%,-50%);transition:opacity .4s;opacity:0}
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);
+      background:rgba(10,9,8,.74);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:var(--maxw);margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:18px}
+  .logo{font-weight:800;letter-spacing:.12em;font-size:17px}
+  .logo i{font-style:normal;color:var(--accent)}
+  .nav-links{display:flex;gap:22px;margin-left:auto;font-size:14.5px;color:var(--muted)}
+  .nav-links a{text-decoration:none;transition:color .2s}
+  .nav-links a:hover{color:var(--ink)}
+  .btn{font:inherit;font-weight:600;border:0;border-radius:999px;padding:11px 22px;cursor:pointer;
+       background:var(--accent);color:#1a1205;transition:transform .15s,box-shadow .25s,filter .2s;
+       box-shadow:0 0 0 rgba(232,163,61,0)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(232,163,61,.28)}
+  .btn:active{transform:translateY(0)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--accent);box-shadow:0 10px 30px rgba(232,163,61,.14)}
+  .btn.sm{padding:9px 18px;font-size:14px}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+  /* layout */
+  section.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px;position:relative;z-index:1}
+  .eyebrow{font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);
+           font-weight:600;margin-bottom:18px}
+  h1{font-size:clamp(42px,7.2vw,86px);line-height:1.02;letter-spacing:-.03em;font-weight:700;margin:0}
+  h2{font-size:clamp(28px,3.6vw,46px);line-height:1.1;letter-spacing:-.02em;margin:0 0 16px}
+  .sub{color:var(--muted);font-size:clamp(16px,1.6vw,19px);line-height:1.6;max-width:60ch;margin:22px 0 0}
+  /* hero */
+  .hero{padding:88px 0 60px;display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center}
+  .hero-cta{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+  .hero-note{margin-top:22px;font-size:13.5px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .dotpulse{width:8px;height:8px;border-radius:50%;background:var(--low);box-shadow:0 0 0 0 rgba(126,154,78,.6);
+            animation:pulse 2s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 10px rgba(126,154,78,0)}100%{box-shadow:0 0 0 0 rgba(126,154,78,0)}}
+  .hero-visual{position:relative;border-radius:22px;overflow:hidden;border:1px solid var(--line);
+               background:var(--panel);aspect-ratio:3/4;max-height:560px}
+  .hero-visual img{width:100%;height:100%;object-fit:cover;display:block}
+  .hero-visual .vgrid{position:absolute;inset:0;pointer-events:none;opacity:.12;
+    background-image:linear-gradient(var(--accent) 1px,transparent 1px),linear-gradient(90deg,var(--accent) 1px,transparent 1px);
+    background-size:34px 34px}
+  .hero-visual .vscan{position:absolute;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    box-shadow:0 0 22px 5px rgba(232,163,61,.45);animation:vscan 3.4s cubic-bezier(.5,0,.5,1) infinite}
+  @keyframes vscan{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+  .chip{position:absolute;backdrop-filter:blur(10px);background:rgba(14,12,9,.8);
+        border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px}
+  .chip b{display:block;font-size:20px;letter-spacing:-.02em}
+  .chip.a{left:16px;bottom:16px} .chip.b{right:16px;top:16px}
+  .band-pill{display:inline-block;font-weight:800;letter-spacing:.1em;font-size:12px;
+             padding:5px 12px;border-radius:999px;background:var(--accent);color:#1a1205}
+  /* hero fingertip reticle (decorative scan treatment, positioned over the fingertip) */
+  .reticle-box{position:absolute;left:16.5%;top:33%;width:15%;height:15%;pointer-events:none;
+               animation:retpulse 2.6s ease-in-out infinite}
+  .reticle-box::before,.reticle-box::after,.reticle-box span::before,.reticle-box span::after{
+    content:"";position:absolute;width:18px;height:18px;border:2px solid var(--accent)}
+  .reticle-box::before{left:0;top:0;border-right:0;border-bottom:0}
+  .reticle-box::after{right:0;top:0;border-left:0;border-bottom:0}
+  .reticle-box span::before{left:0;bottom:0;border-right:0;border-top:0}
+  .reticle-box span::after{right:0;bottom:0;border-left:0;border-top:0}
+  .reticle-box span{position:absolute;left:0;top:-22px;font-family:"JetBrains Mono",monospace;
+                    font-size:10.5px;letter-spacing:.18em;color:var(--accent)}
+  @keyframes retpulse{0%,100%{opacity:.55}50%{opacity:1}}
+  /* scroll reveal */
+  .reveal-sec{position:relative;margin-top:40px}
+  .reveal-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+  .sticky{position:sticky;top:96px;height:min(74vh,660px);border-radius:22px;overflow:hidden;
+          border:1px solid var(--line);background:#070605}
+  .sticky img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+              opacity:0;transform:scale(1.04);transition:opacity .55s ease,transform .8s ease}
+  .sticky img.on{opacity:1;transform:scale(1)}
+  .sticky .hud{position:absolute;left:14px;top:14px;font-size:12px;letter-spacing:.14em;
+               color:var(--accent);background:rgba(10,9,8,.72);border:1px solid var(--line);
+               padding:6px 12px;border-radius:999px}
+  .sticky .pbar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.08)}
+  .sticky .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+                  width:0;transition:width .4s ease}
+  .steps-col{padding:40px 0 60px}
+  .step{padding:30px 0 30px 26px;border-left:2px solid var(--line);opacity:.34;
+        transition:opacity .45s,border-color .45s,transform .45s}
+  .step.on{opacity:1;border-color:var(--accent);transform:translateX(4px)}
+  .step h3{margin:0 0 8px;font-size:22px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  .step h3 span.n{font-size:12px;color:var(--accent);letter-spacing:.14em}
+  .step p{margin:0;color:var(--muted);line-height:1.65;font-size:15.5px}
+  .step code{background:var(--panel2);border:1px solid var(--line);padding:2px 7px;border-radius:6px;
+             font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--accent)}
+  /* findings */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:18px;margin-top:38px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;
+        transition:transform .3s,border-color .3s,background .3s}
+  .card:hover{transform:translateY(-6px);border-color:var(--accent);background:var(--panel2)}
+  .card .big{font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1}
+  .card .big em{font-family:"Instrument Serif",serif;font-style:italic;color:var(--accent);font-weight:400}
+  .card p{color:var(--muted);font-size:14.5px;margin:10px 0 0;line-height:1.6}
+  .secpad{padding:96px 0}
+  /* claim vs reality */
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:36px}
+  .vs-card{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+           transition:transform .3s,border-color .3s}
+  .vs-card:hover{transform:translateY(-5px)}
+  .vs-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#070605}
+  .vs-card figcaption{padding:16px 18px 20px;color:var(--muted);font-size:14.5px;line-height:1.6}
+  .vs-card figcaption strong{color:var(--ink)}
+  .vs-tag{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;padding:10px 18px;
+          border-bottom:1px solid var(--line)}
+  .vs-tag.claim{color:var(--high);background:rgba(217,81,58,.07)}
+  .vs-tag.real{color:var(--low);background:rgba(126,154,78,.08)}
+  .vs-card:has(.claim):hover{border-color:var(--high)}
+  .vs-card:has(.real):hover{border-color:var(--low)}
+  @media(max-width:900px){.vs{grid-template-columns:1fr}}
+  .lead{color:var(--muted);font-size:17px;line-height:1.7;max-width:62ch}
+  /* tool */
+  .tool{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+        padding:90px 0 100px;margin-top:40px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;margin-bottom:20px}
+  .panel h2{font-size:21px;margin:0 0 12px}
+  .drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:38px 18px;text-align:center;
+        cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+  .drop:hover,.drop.over{border-color:var(--accent);background:rgba(232,163,61,.05);transform:scale(1.008)}
+  .drop input{display:none}
+  .drop .ic{font-size:30px}
+  .drop strong{display:block;font-size:17px;margin-top:8px}
+  .drop small{color:var(--muted)}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .grow{flex:1}
+  label.consent{display:flex;gap:11px;align-items:flex-start;margin:18px 0;font-size:15px}
+  label.consent input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent)}
+  .privacy{font-size:13px;color:var(--dim);margin:12px 0 0}
+  .muted{color:var(--muted);font-size:14px}
+  /* cropper */
+  .cropper{position:relative;display:inline-block;max-width:100%;touch-action:none;user-select:none;
+           border-radius:12px;overflow:hidden}
+  .cropper img{display:block;max-width:100%;max-height:400px}
+  .cropbox{position:absolute;border:2px solid var(--accent);box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move}
+  .handle{position:absolute;width:14px;height:14px;background:var(--accent);border:2px solid #1a1205;border-radius:4px}
+  .h-nw{left:-8px;top:-8px;cursor:nwse-resize}.h-ne{right:-8px;top:-8px;cursor:nesw-resize}
+  .h-sw{left:-8px;bottom:-8px;cursor:nesw-resize}.h-se{right:-8px;bottom:-8px;cursor:nwse-resize}
+  /* processing */
+  .stage-wrap{position:relative;border-radius:14px;overflow:hidden;background:#070605}
+  .stage-wrap img,.stage-wrap video{display:block;width:100%}
+  .stage-wrap img{filter:saturate(.75) brightness(.82)}
+  .stage-wrap canvas.fx{position:absolute;inset:0;width:100%;height:100%}
+  .scanline{position:absolute;left:0;right:0;height:3px;top:0;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    box-shadow:0 0 18px 4px rgba(232,163,61,.5);animation:scan 1.8s cubic-bezier(.6,0,.4,1) infinite}
+  @keyframes scan{0%{top:2%;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:98%;opacity:0}}
+  .reticle{position:absolute;inset:0;pointer-events:none;opacity:.09;
+    background-image:linear-gradient(var(--accent) 1px,transparent 1px),linear-gradient(90deg,var(--accent) 1px,transparent 1px);
+    background-size:28px 28px}
+  .steps{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:9px}
+  .steps li{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14.5px;opacity:.45;
+            transition:opacity .3s,color .3s}
+  .steps li .dot{width:21px;height:21px;border-radius:50%;border:2px solid var(--line);display:grid;
+                 place-items:center;font-size:11px;flex:none;transition:all .3s}
+  .steps li.active{opacity:1;color:var(--ink)}
+  .steps li.active .dot{border-color:var(--accent);color:var(--accent)}
+  .steps li.done{opacity:1}
+  .steps li.done .dot{background:var(--accent);border-color:var(--accent);color:#1a1205}
+  .steps li.active .dot .spin{width:9px;height:9px;border:2px solid var(--accent);border-right-color:transparent;
+                              border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .pbar2{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:16px}
+  .pbar2>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+  /* results */
+  .headline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .band{display:inline-block;font-weight:800;letter-spacing:.07em;padding:8px 17px;border-radius:999px;
+        color:#fff;font-size:15px}
+  .HIGH{background:var(--high)}.MEDIUM{background:var(--med);color:#241a04}.LOW{background:var(--low);color:#10160a}
+  .meter{flex:1 1 180px;height:10px;background:var(--panel2);border-radius:99px;overflow:hidden;min-width:150px}
+  .meter>div{height:100%;background:linear-gradient(90deg,var(--low),var(--med),var(--high));transition:width .9s}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin:16px 0}
+  .stat{background:var(--panel2);border-radius:12px;padding:12px 14px;border:1px solid var(--line)}
+  .stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .stat span{font-size:12px;color:var(--muted)}
+  .evwrap img{display:block;max-width:100%;max-height:72vh;margin:0 auto;border-radius:12px;border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{text-align:left;padding:8px 4px;border-bottom:1px solid var(--line)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  details summary{cursor:pointer;font-weight:600;margin-top:8px}
+  ol.trace{padding-left:20px;font-size:14px}ol.trace li{margin:7px 0}
+  code{background:var(--panel2);padding:2px 7px;border-radius:6px;font-size:13px;font-family:"JetBrains Mono",monospace}
+  .err{color:var(--high);font-weight:600}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .note{border-left:3px solid var(--accent);padding:12px 16px;background:var(--panel2);border-radius:0 12px 12px 0;font-size:14px}
+  .fmt{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:#0b0907;border:1px solid var(--line);
+       border-radius:10px;padding:14px;overflow-x:auto;white-space:pre;color:var(--muted)}
+  .tag{font-size:11.5px;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:3px 10px;
+       letter-spacing:.1em}
+  footer{padding:60px 22px 70px;text-align:center;color:var(--dim);font-size:13.5px}
+  .disclaimer-bar{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+                  font-size:13px;text-align:center;padding:10px 18px;color:var(--muted)}
+  [hidden]{display:none!important}
+  .fade{opacity:0;transform:translateY(26px);transition:opacity .8s,transform .8s}
+  .fade.in{opacity:1;transform:none}
+  @media(max-width:900px){
+    .hero{grid-template-columns:1fr;gap:34px;padding:56px 0 40px}
+    .reveal-grid{grid-template-columns:1fr;gap:0}
+    .sticky{height:54vh;top:78px}
+    .steps-col{padding:28px 0 40px}
+    .nav-links{display:none}
+    .compare{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div id="glow"></div>
+
+<nav>
+  <div class="nav-in">
+    <div class="logo">GATT<i>A</i>CA</div>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#findings">Findings</a>
+      <a href="#claim">Claim vs. reality</a>
+      <a href="#formats">Formats</a>
+    </div>
+    <button class="btn sm" onclick="document.getElementById('tool').scrollIntoView({behavior:'smooth'})">Test a photo</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="wrap hero">
+  <div>
+    <div class="eyebrow">OpenCV AI Competition 2026 · powered by AWS</div>
+    <h1>Your photo leaks<br>more than you <span class="serif">think.</span></h1>
+    <p class="sub">Every time you post a peace sign, your fingertips go with it. GATTACA measures exactly
+      how much fingerprint ridge detail a photo of <em>your own hand</em> actually exposes — and shows you
+      where, why, and what to do about it.</p>
+    <div class="hero-cta">
+      <button class="btn" onclick="document.getElementById('tool').scrollIntoView({behavior:'smooth'})">Test your photo →</button>
+      <button class="btn ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">See how it works</button>
+    </div>
+    <div class="hero-note"><span class="dotpulse"></span> Processed in memory · deleted instantly · never stored</div>
+  </div>
+  <div class="hero-visual">
+    <img src="/assets/hero_scan.jpg" alt="A person making a V / peace-sign pose toward the camera, fingertips framed by scan brackets" style="object-position:28% 30%">
+    <div class="vgrid"></div><div class="vscan"></div>
+    <div class="chip b"><span class="band-pill">SCANNING</span></div>
+    <div class="chip a"><b>1 photo</b>is all it takes</div>
+  </div>
+</section>
+
+<div class="disclaimer-bar">GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.</div>
+
+<!-- SCROLL REVEAL -->
+<section class="wrap reveal-sec" id="how">
+  <div style="padding:90px 0 10px" class="fade">
+    <div class="eyebrow">The pipeline</div>
+    <h2>Six stages of <span class="serif">real</span> computer vision.</h2>
+    <p class="lead">Scroll to watch an actual run. Every frame below is genuine OpenCV&nbsp;5 output from this
+      project's own pipeline — rendered on a <strong>synthetic hand</strong>, so no real person's biometrics
+      appear in this demo.</p>
+  </div>
+  <div class="reveal-grid">
+    <div class="sticky" id="sticky">
+      <img src="/assets/01_photo.jpg" alt="Input photo" class="on">
+      <img src="/assets/02_detect.jpg" alt="Fingertip detection">
+      <img src="/assets/03_roi.jpg" alt="Rectified region of interest">
+      <img src="/assets/04_enhance.jpg" alt="Gabor ridge enhancement">
+      <img src="/assets/05_minutiae.jpg" alt="Minutiae extraction">
+      <img src="/assets/06_heat.jpg" alt="Exposure heat map">
+      <div class="hud mono" id="hud">01 / INPUT</div>
+      <div class="pbar"><i id="revealBar"></i></div>
+    </div>
+    <div class="steps-col" id="stepsCol">
+      <div class="step on"><h3><span class="n mono">01</span> Input</h3>
+        <p>A single ordinary photo. No special hardware, no scanner — exactly what a camera or a social
+          post would capture.</p></div>
+      <div class="step"><h3><span class="n mono">02</span> Detect</h3>
+        <p>A neural hand-landmark model runs through <code>cv2.dnn</code> to find fingertips, with a
+          classical skin-mask and <code>convexityDefects</code> fallback.</p></div>
+      <div class="step"><h3><span class="n mono">03</span> Rectify</h3>
+        <p>The distal phalanx is cropped, perspective-corrected and <em>unrolled</em> from its cylinder, then
+          rescaled so one ridge spans ~9&nbsp;px — the 500&nbsp;ppi forensic standard.</p></div>
+      <div class="step"><h3><span class="n mono">04</span> Enhance</h3>
+        <p>CLAHE, denoising, a structure-tensor orientation field and a bank of oriented
+          <code>getGaborKernel</code> filters. This is where ridges either appear — or prove they were never there.</p></div>
+      <div class="step"><h3><span class="n mono">05</span> Extract</h3>
+        <p>Binarise, thin to a one-pixel skeleton with <code>ximgproc.thinning</code>, then find ridge
+          endings and bifurcations by crossing number.</p></div>
+      <div class="step"><h3><span class="n mono">06</span> Score</h3>
+        <p>A calibrated model turns clarity, resolution and feature count into HIGH / MEDIUM / LOW — plus a
+          heat map showing <em>where</em> you're exposed. Never a usable print.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FINDINGS -->
+<section class="wrap secpad" id="findings">
+  <div class="fade">
+    <div class="eyebrow">Measured, not guessed</div>
+    <h2>The internet says <span class="serif">“1.5 metres.”</span><br>We actually measured it.</h2>
+    <p class="lead">Popular articles repeat unsourced claims with no methodology. We ran a controlled study —
+      60 fingers × 47 degradation conditions, matched against paired ground truth — and parameterised it by
+      <strong>pixels per ridge period</strong>, the only variable that physically matters.</p>
+  </div>
+  <div class="cards">
+    <div class="card fade"><div class="big">3.9<em> px</em></div>
+      <p>Pixels per ridge needed for 95% identification. Below ~2.9 px, recovery collapses.</p></div>
+    <div class="card fade"><div class="big">~1<em> px</em></div>
+      <p>Lost to a single JPEG q75 re-encode — platform resizing is accidental protection.</p></div>
+    <div class="card fade"><div class="big">0.87<em> px</em></div>
+      <p>What a 12&nbsp;MP phone actually resolves at 1.5&nbsp;m — below Nyquist. The folklore is wrong.</p></div>
+    <div class="card fade"><div class="big">LOW<em>→</em>MED</div>
+      <p>Fusing 6 video frames promotes a finger a whole risk band. A clip leaks more than a photo.</p></div>
+  </div>
+</section>
+
+<!-- CLAIM VS REALITY -->
+<section class="wrap secpad" id="claim" style="padding-top:20px">
+  <div class="fade">
+    <div class="eyebrow">Claim vs. reality</div>
+    <h2>Same pose. One is <span class="serif">fiction.</span></h2>
+    <p class="lead">Viral posts "prove" the risk with zoomed-in fingerprints. In one widely shared report, the zoom
+      is literally captioned <em>"AI-generated image."</em> We made one the same way, then ran the real photo
+      through GATTACA.</p>
+  </div>
+  <div class="vs">
+    <figure class="vs-card fade">
+      <div class="vs-tag claim">THE CLAIM · AI-GENERATED ILLUSTRATION</div>
+      <img src="/assets/claim_ai_illustration.jpg" alt="AI-generated illustration of a zoomed fingerprint, the kind used in viral posts">
+      <figcaption>A crisp whorl "recovered" from a peace sign. It looks like evidence, but the fingerprint was
+        <strong>painted by an image model</strong>. It isn't in the photo.</figcaption>
+    </figure>
+    <figure class="vs-card fade">
+      <div class="vs-tag real">THE MEASUREMENT · REAL PHOTO, REAL PIPELINE</div>
+      <img src="/assets/reality_measured.jpg" alt="GATTACA's optical zoom of the same fingertip in the real photo, rated LOW">
+      <figcaption>The same pose in a real photo. The neural detector finds all five fingers. The V fingertips hold
+        <strong>~1.6 pixels per ridge</strong>, below the Nyquist limit, so no ridges can be recovered. Band:
+        <strong>LOW</strong>.</figcaption>
+    </figure>
+  </div>
+  <p class="muted fade" style="margin-top:18px">Honest caveat: a closer, sharper shot of a fingertip can expose real
+    ridge detail. That's what the measured curve above quantifies, and why the tool below exists.</p>
+</section>
+
+<!-- TOOL -->
+<div class="tool" id="tool">
+<section class="wrap">
+  <div class="fade" style="margin-bottom:30px">
+    <div class="eyebrow">Try it</div>
+    <h2>Test a photo of <span class="serif">your own</span> hand.</h2>
+    <p class="lead">Upload, crop, or go live. Your file is analysed in memory and deleted the moment the
+      result is ready — nothing is stored, nothing is logged.</p>
+  </div>
+
+  <!-- 1. upload -->
+  <section class="panel" id="uploadCard">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="image/*,video/*">
+      <div class="ic">🖐️</div>
+      <strong>Drop a photo or short video of your hand</strong>
+      <small>JPEG, PNG, MP4 or MOV, up to 25 MB</small>
+    </label>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost sm" id="cameraBtn">📷 Take a photo</button>
+      <button class="btn ghost sm" id="liveBtn">🔴 Live camera</button>
+      <span class="muted grow">Never upload photos of other people.</span>
+    </div>
+  </section>
+
+  <!-- live -->
+  <section class="panel" id="liveCard" hidden>
+    <h2>Live camera</h2>
+    <p class="muted">Hold a fingertip steady, close to the lens, in good light. Watch the score climb as the
+      ridges start to resolve — that is the pixels-per-ridge threshold happening in real time.</p>
+    <div class="stage-wrap" id="liveWrap">
+      <video id="live" playsinline muted autoplay></video>
+      <div class="reticle"></div>
+      <div class="scanline" id="liveScan" hidden></div>
+      <div id="liveBadge" style="position:absolute;top:14px;left:14px;display:none;align-items:center;gap:10px">
+        <span class="band" id="liveBand">—</span>
+        <span class="mono" style="background:rgba(10,9,8,.78);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px" id="liveMeta"></span>
+      </div>
+    </div>
+    <label class="consent"><input type="checkbox" id="liveConsent">
+      <span>This is <strong>my own hand</strong>, and I consent to these frames being processed for this assessment.</span></label>
+    <div class="row">
+      <button class="btn" id="scanNow" disabled>⚡ Scan this frame</button>
+      <button class="btn ghost" id="autoScan" disabled>▶ Auto-scan</button>
+      <button class="btn ghost" id="liveMin" hidden>🔬 Minutiae (research)</button>
+      <button class="btn ghost grow" style="text-align:right" id="stopLive">Stop camera</button>
+    </div>
+    <p class="privacy" id="liveNote">Frames are sent one at a time, scored in memory and discarded. Nothing is recorded.</p>
+  </section>
+
+  <!-- crop -->
+  <section class="panel" id="cropCard" hidden>
+    <h2>Frame your fingertips</h2>
+    <p class="muted">Drag the box to crop to the hand — a tighter crop measures ridge detail more accurately. Videos skip this step.</p>
+    <div id="cropHost"></div>
+    <label class="consent"><input type="checkbox" id="consent">
+      <span>This is a photo or video of <strong>my own hand</strong>, and I consent to it being processed for this assessment.</span></label>
+    <div class="row">
+      <button class="btn" id="go" disabled>✨ Analyse exposure</button>
+      <button class="btn ghost" id="resetCrop" hidden>Reset crop</button>
+      <button class="btn ghost" id="startOver">Choose a different file</button>
+      <button class="btn ghost grow" style="text-align:right" id="protect" disabled>Protect my photo</button>
+    </div>
+  </section>
+
+  <!-- processing -->
+  <section class="panel" id="procCard" hidden>
+    <h2 id="procTitle">Analysing…</h2>
+    <div class="stage-wrap" id="stageWrap">
+      <img id="stageImg" alt="">
+      <canvas class="fx" id="fx"></canvas>
+      <div class="reticle"></div>
+      <div class="scanline"></div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div class="pbar2"><div id="pfill"></div></div>
+  </section>
+
+  <div id="status" aria-live="polite"></div>
+  <section id="result" class="panel" hidden></section>
+  <section id="minCard" class="panel" hidden></section>
+  <section id="protected" class="panel" hidden></section>
+</section>
+</div>
+
+<!-- FORMATS -->
+<section class="wrap secpad" id="formats">
+  <div class="fade">
+    <div class="eyebrow">For the curious</div>
+    <h2>What a fingerprint <span class="serif">actually</span> is, digitally.</h2>
+    <p class="lead">Forensic systems rarely store a picture of a ridge. They store a compact
+      <strong>minutiae template</strong>: the points where ridges end or split, each as a position, an angle
+      and a type.</p>
+  </div>
+  <div class="fmt fade" style="margin-top:26px">ISO/IEC 19794-2 minutiae record (one finger)
+┌──────────┬──────────┬────────────┬─────────────┬──────────┐
+│   x (px) │   y (px) │ angle (°)  │ type        │ quality  │
+├──────────┼──────────┼────────────┼─────────────┼──────────┤
+│    182   │    96    │    41      │ ridge-ending│   74     │
+│    204   │   158    │   126      │ bifurcation │   88     │
+│     …    │    …     │    …       │     …       │    …     │
+└──────────┴──────────┴────────────┴─────────────┴──────────┘
+Related: ANSI/NIST-ITL 1-2011 (exchange) · WSQ (500-ppi compression)</div>
+  <div class="note fade" style="margin-top:20px"><strong>GATTACA deliberately does not emit this.</strong>
+    It reports how many ridge features it found and how clearly — never their coordinates, never a template,
+    never a clean enhanced print you could feed to a matcher. A privacy-awareness tool must not become the
+    extraction tool it warns about.</div>
+</section>
+
+<footer>
+  GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.<br>
+  OpenCV 5 · AWS · OpenCV AI Competition 2026 · <a href="/health">service status</a>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d = 2) => (v === null || v === undefined) ? "—" : Number(v).toFixed(d);
+
+/* ---------- landing: cursor glow, fades, scroll reveal ---------- */
+const glow = $("glow");
+window.addEventListener("pointermove", e => {
+  glow.style.opacity = 1; glow.style.left = e.clientX + "px"; glow.style.top = e.clientY + "px";
+}, { passive: true });
+
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) e.target.classList.add("in"); }),
+  { threshold: .15 });
+document.querySelectorAll(".fade").forEach(el => io.observe(el));
+
+const HUDS = ["01 / INPUT", "02 / DETECT", "03 / RECTIFY", "04 / ENHANCE", "05 / EXTRACT", "06 / SCORE"];
+function onScrollReveal() {
+  const col = $("stepsCol"), sticky = $("sticky");
+  if (!col || !sticky) return;
+  const steps = [...col.children], imgs = [...sticky.querySelectorAll("img")];
+  const mid = window.innerHeight * 0.45;
+  let active = 0;
+  steps.forEach((s, i) => { if (s.getBoundingClientRect().top <= mid) active = i; });
+  steps.forEach((s, i) => s.classList.toggle("on", i === active));
+  imgs.forEach((im, i) => im.classList.toggle("on", i === active));
+  $("hud").textContent = HUDS[active] || "";
+  $("revealBar").style.width = ((active + 1) / steps.length * 100) + "%";
+}
+window.addEventListener("scroll", onScrollReveal, { passive: true });
+window.addEventListener("resize", onScrollReveal);
+onScrollReveal();
+
+/* ---------- tool ---------- */
+const STAGES = [
+  "Locating hand & fingertips (neural detector)",
+  "Isolating the distal phalanx",
+  "Rectifying & unrolling the finger surface",
+  "Measuring ridge resolution (pixels per ridge)",
+  "Reconstructing ridge evidence",
+  "Scoring recoverability",
+];
+let file = null, isVideo = false, imgEl = null, crop = null, dragMode = null, dragStart = null;
+
+function reset() {
+  file = null; isVideo = false; imgEl = null; crop = null;
+  $("result").hidden = true; $("protected").hidden = true; $("procCard").hidden = true;
+  $("cropCard").hidden = true; $("uploadCard").hidden = false; $("status").innerHTML = "";
+  $("consent").checked = false; $("file").value = "";
+}
+function refresh() {
+  const ok = file && $("consent").checked;
+  $("go").disabled = !ok;
+  $("protect").disabled = !(ok && !isVideo);
+}
+function pick(f) {
+  if (!f) return;
+  file = f; isVideo = f.type.startsWith("video");
+  $("uploadCard").hidden = true; $("cropCard").hidden = false; $("liveCard").hidden = true;
+  $("result").hidden = true; $("protected").hidden = true;
+  const host = $("cropHost");
+  if (isVideo) {
+    host.innerHTML = `<video src="${URL.createObjectURL(f)}" controls muted playsinline
+      style="max-width:100%;max-height:360px;border-radius:12px"></video>
+      <p class="muted">The agent will pick the sharpest frames and fuse them automatically.</p>`;
+    $("resetCrop").hidden = true;
+  } else { buildCropper(URL.createObjectURL(f)); }
+  refresh();
+  $("cropCard").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+$("file").addEventListener("change", e => pick(e.target.files[0]));
+$("consent").addEventListener("change", refresh);
+$("startOver").addEventListener("click", reset);
+$("cameraBtn").addEventListener("click", () => {
+  const i = $("file"); i.setAttribute("capture", "environment"); i.click();
+  setTimeout(() => i.removeAttribute("capture"), 500);
+});
+const drop = $("drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => pick(e.dataTransfer.files[0]));
+
+function buildCropper(url) {
+  $("cropHost").innerHTML = `<div class="cropper" id="cropper"><img id="cimg" alt="your hand">
+    <div class="cropbox" id="cbox">
+      <div class="handle h-nw" data-h="nw"></div><div class="handle h-ne" data-h="ne"></div>
+      <div class="handle h-sw" data-h="sw"></div><div class="handle h-se" data-h="se"></div>
+    </div></div>`;
+  imgEl = $("cimg");
+  imgEl.onload = () => {
+    const w = imgEl.clientWidth, h = imgEl.clientHeight;
+    crop = { x: w * .15, y: h * .1, w: w * .7, h: h * .8 }; drawCrop();
+  };
+  imgEl.src = url;
+  $("resetCrop").hidden = false;
+  $("cbox").addEventListener("pointerdown", e => startDrag(e, e.target.dataset.h || "move"));
+  window.addEventListener("pointermove", onDrag);
+  window.addEventListener("pointerup", () => { dragMode = null; });
+}
+function drawCrop() {
+  const b = $("cbox");
+  b.style.left = crop.x + "px"; b.style.top = crop.y + "px";
+  b.style.width = crop.w + "px"; b.style.height = crop.h + "px";
+}
+function startDrag(e, mode) { e.preventDefault(); dragMode = mode; dragStart = { x: e.clientX, y: e.clientY, c: { ...crop } }; }
+function onDrag(e) {
+  if (!dragMode || !imgEl) return;
+  const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y, c = dragStart.c;
+  const W = imgEl.clientWidth, H = imgEl.clientHeight, min = 30;
+  let n = { ...c };
+  if (dragMode === "move") {
+    n.x = Math.min(Math.max(0, c.x + dx), W - c.w);
+    n.y = Math.min(Math.max(0, c.y + dy), H - c.h);
+  } else {
+    if (dragMode.includes("e")) n.w = Math.min(Math.max(min, c.w + dx), W - c.x);
+    if (dragMode.includes("s")) n.h = Math.min(Math.max(min, c.h + dy), H - c.y);
+    if (dragMode.includes("w")) { const nx = Math.min(Math.max(0, c.x + dx), c.x + c.w - min); n.x = nx; n.w = c.w + (c.x - nx); }
+    if (dragMode.includes("n")) { const ny = Math.min(Math.max(0, c.y + dy), c.y + c.h - min); n.y = ny; n.h = c.h + (c.y - ny); }
+  }
+  crop = n; drawCrop();
+}
+$("resetCrop").addEventListener("click", () => {
+  if (!imgEl) return;
+  crop = { x: 0, y: 0, w: imgEl.clientWidth, h: imgEl.clientHeight }; drawCrop();
+});
+async function croppedBlob() {
+  if (isVideo || !imgEl || !crop) return file;
+  const sx = imgEl.naturalWidth / imgEl.clientWidth, sy = imgEl.naturalHeight / imgEl.clientHeight;
+  if (crop.w >= imgEl.clientWidth - 2 && crop.h >= imgEl.clientHeight - 2) return file;
+  const cw = Math.round(crop.w * sx), ch = Math.round(crop.h * sy);
+  const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+  cv.getContext("2d").drawImage(imgEl, Math.round(crop.x * sx), Math.round(crop.y * sy), cw, ch, 0, 0, cw, ch);
+  return await new Promise(r => cv.toBlob(r, "image/jpeg", .95));
+}
+
+let fxRAF = null;
+function startFx() {
+  const cv = $("fx"), wrap = $("stageWrap");
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = wrap.clientWidth * dpr; cv.height = wrap.clientHeight * dpr;
+  const ctx = cv.getContext("2d");
+  const N = 46, nodes = Array.from({ length: N }, () => ({
+    x: Math.random() * cv.width, y: Math.random() * cv.height,
+    vx: (Math.random() - .5) * .25 * dpr, vy: (Math.random() - .5) * .25 * dpr }));
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8a33d";
+  (function frame() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const n of nodes) {
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 0 || n.x > cv.width) n.vx *= -1;
+      if (n.y < 0 || n.y > cv.height) n.vy *= -1;
+    }
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const a = nodes[i], b = nodes[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 120 * dpr) {
+        ctx.globalAlpha = (1 - d / (120 * dpr)) * .35; ctx.strokeStyle = col; ctx.lineWidth = dpr;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = .9; ctx.fillStyle = col;
+    for (const n of nodes) { ctx.beginPath(); ctx.arc(n.x, n.y, 2 * dpr, 0, 7); ctx.fill(); }
+    fxRAF = requestAnimationFrame(frame);
+  })();
+}
+function stopFx() { if (fxRAF) cancelAnimationFrame(fxRAF); fxRAF = null; }
+function renderSteps(active) {
+  $("steps").innerHTML = STAGES.map((s, i) => {
+    const cls = i < active ? "done" : i === active ? "active" : "";
+    const mark = i < active ? "✓" : i === active ? '<span class="spin"></span>' : (i + 1);
+    return `<li class="${cls}"><span class="dot">${mark}</span>${esc(s)}</li>`;
+  }).join("");
+  $("pfill").style.width = Math.round((active / STAGES.length) * 100) + "%";
+}
+async function runAnimation(previewUrl) {
+  $("procCard").hidden = false; $("procTitle").textContent = isVideo ? "Analysing frames…" : "Analysing…";
+  $("stageImg").src = previewUrl || "";
+  $("procCard").scrollIntoView({ behavior: "smooth", block: "center" });
+  renderSteps(0); startFx();
+  let step = 0;
+  const timer = setInterval(() => { if (step < STAGES.length - 1) renderSteps(++step); }, 520);
+  return () => { clearInterval(timer); renderSteps(STAGES.length); $("pfill").style.width = "100%"; stopFx(); };
+}
+
+async function post(path, blob) {
+  const fd = new FormData();
+  fd.append("file", blob, isVideo ? (file.name || "clip.mp4") : "hand.jpg");
+  fd.append("consent", $("consent").checked ? "true" : "false");
+  const r = await fetch(path, { method: "POST", body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || `Request failed (${r.status})`);
+  return j;
+}
+
+$("go").addEventListener("click", async () => {
+  $("result").hidden = true; $("status").innerHTML = "";
+  const blob = await croppedBlob();
+  const preview = isVideo ? "" : URL.createObjectURL(blob);
+  const finish = await runAnimation(preview);
+  const started = Date.now();
+  try {
+    const j = await post("/api/score", blob);
+    await new Promise(r => setTimeout(r, Math.max(0, 2600 - (Date.now() - started))));
+    finish(); await new Promise(r => setTimeout(r, 350));
+    $("procCard").hidden = true;
+    renderResult(j);
+    $("result").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (e) {
+    finish(); $("procCard").hidden = true;
+    $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`;
+  }
+});
+
+$("protect").addEventListener("click", async () => {
+  $("status").innerHTML = `<p class="muted">Suppressing ridge detail on your fingertips and re-checking…</p>`;
+  try {
+    const j = await post("/api/protect", await croppedBlob());
+    $("protected").hidden = false;
+    $("protected").innerHTML = `
+      <h2>Protected copy</h2>
+      <div class="compare">
+        <div><p class="muted">Before</p><span class="band ${j.before.band}">${j.before.band}</span> <span class="muted">P = ${fmt(j.before.probability)}</span></div>
+        <div><p class="muted">After</p><span class="band ${j.after.band}">${j.after.band}</span> <span class="muted">P = ${fmt(j.after.probability)}</span></div>
+      </div>
+      <p><img src="${j.protected_image}" alt="Protected photo" style="max-width:100%;border-radius:12px;margin-top:14px"></p>
+      <p><a download="protected.jpg" href="${j.protected_image}">⬇ Download protected photo</a></p>
+      <p class="muted">${esc(j.retention)}</p>`;
+    $("status").innerHTML = "";
+    $("protected").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (e) { $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+});
+
+/* ---------- live camera ---------- */
+let stream = null, autoTimer = null, scanning = false, researchMode = false;
+fetch("/health").then(r => r.json()).then(h => { researchMode = !!h.research_mode; }).catch(() => {});
+function liveRefresh() {
+  const ok = stream && $("liveConsent").checked;
+  $("scanNow").disabled = !ok; $("autoScan").disabled = !ok;
+  $("liveMin").hidden = !(ok && researchMode);
+}
+$("liveConsent").addEventListener("change", liveRefresh);
+$("liveBtn").addEventListener("click", async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+  } catch (e) {
+    $("status").innerHTML = `<p class="err">Could not open the camera: ${esc(e.message)}. ` +
+      `Browsers only allow camera access on <code>https://</code> or <code>localhost</code>.</p>`;
+    return;
+  }
+  $("live").srcObject = stream;
+  $("uploadCard").hidden = true; $("cropCard").hidden = true; $("liveCard").hidden = false;
+  liveRefresh();
+  $("liveCard").scrollIntoView({ behavior: "smooth", block: "center" });
+});
+function stopLive() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; $("autoScan").textContent = "▶ Auto-scan"; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  $("liveCard").hidden = true; $("minCard").hidden = true; $("uploadCard").hidden = false;
+  $("liveBadge").style.display = "none";
+}
+$("stopLive").addEventListener("click", stopLive);
+window.addEventListener("beforeunload", stopLive);
+function grabFrame() {
+  const v = $("live");
+  if (!v.videoWidth) return null;
+  const cv = document.createElement("canvas");
+  cv.width = v.videoWidth; cv.height = v.videoHeight;
+  cv.getContext("2d").drawImage(v, 0, 0);
+  return new Promise(r => cv.toBlob(r, "image/jpeg", .95));
+}
+async function liveScan(full) {
+  if (scanning) return;
+  const blob = await grabFrame();
+  if (!blob) return;
+  scanning = true; $("liveScan").hidden = false;
+  const pv = isVideo, pf = file, pc = $("consent").checked;
+  isVideo = false; file = { name: "frame.jpg", type: "image/jpeg" }; $("consent").checked = $("liveConsent").checked;
+  try {
+    const j = await post("/api/score", blob);
+    $("liveBadge").style.display = "flex";
+    $("liveBand").className = "band " + j.band; $("liveBand").textContent = j.band;
+    const m = j.metrics || {};
+    $("liveMeta").textContent = `P ${fmt(j.probability)} · ${fmt(m.pprp, 1)} px/ridge · ${m.minutiae_count ?? 0} features`;
+    if (full) { renderResult(j); $("result").scrollIntoView({ behavior: "smooth", block: "center" }); }
+  } catch (e) { $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  finally { isVideo = pv; file = pf; $("consent").checked = pc; scanning = false; $("liveScan").hidden = true; }
+}
+$("scanNow").addEventListener("click", () => liveScan(true));
+$("autoScan").addEventListener("click", () => {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; $("autoScan").textContent = "▶ Auto-scan"; }
+  else { $("autoScan").textContent = "⏸ Stop auto-scan"; liveScan(false); autoTimer = setInterval(() => liveScan(false), 2000); }
+});
+$("liveMin").addEventListener("click", async () => {
+  const blob = await grabFrame();
+  if (!blob) return;
+  const pv = isVideo, pf = file, pc = $("consent").checked;
+  isVideo = false; file = { name: "frame.jpg", type: "image/jpeg" }; $("consent").checked = $("liveConsent").checked;
+  $("status").innerHTML = `<p class="muted">Extracting minutiae from this frame…</p>`;
+  try {
+    const j = await post("/api/minutiae", blob);
+    $("minCard").hidden = false;
+    $("minCard").innerHTML = `
+      <h2>Forensic minutiae — live frame <span class="tag">RESEARCH MODE</span></h2>
+      <div class="grid">
+        <div class="stat"><b>${j.minutiae_count}</b><span>minutiae</span></div>
+        <div class="stat"><b>${j.endings}</b><span>ridge endings</span></div>
+        <div class="stat"><b>${j.bifurcations}</b><span>bifurcations</span></div>
+        <div class="stat"><b>${fmt(j.pprp, 1)}</b><span>px per ridge</span></div>
+      </div>
+      <div class="evwrap"><img src="${j.chart}" alt="Minutiae extraction chart"></div>
+      <div class="note" style="margin-top:14px">${esc(j.note)}</div>
+      <p class="muted">${esc(j.retention)}</p>`;
+    $("status").innerHTML = "";
+    $("minCard").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (e) { $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  finally { isVideo = pv; file = pf; $("consent").checked = pc; }
+});
+
+function renderResult(j) {
+  const m = j.metrics || {};
+  const trace = (j.agent && j.agent.trace) || [];
+  const steps = trace.filter(e => e.kind === "decision").map(e => {
+    const res = trace.find(r => r.kind === "result" && r.step === e.step + 1);
+    const a = res && res.observation && res.observation.assessment;
+    const out = a && a.band ? ` → <span class="band ${a.band}" style="font-size:11px;padding:2px 9px">${a.band}</span> P=${fmt(a.probability)}` : "";
+    return `<li><code>${esc(e.rule)}</code> <b>${esc(e.action)}</b>: ${esc(e.reason)}${out}</li>`;
+  }).join("");
+  const dist = (j.distances || []).map(d => `<tr><td>${esc(d.camera)}</td><td class="num">${fmt(d.distance_cm, 0)} cm</td></tr>`).join("");
+  $("result").hidden = false;
+  $("result").innerHTML = `
+    <div class="headline"><span class="band ${j.band}">${j.band}</span>
+      <div class="meter"><div style="width:${Math.round((j.probability || 0) * 100)}%"></div></div>
+      <span class="muted">P(identifiable) ${fmt(j.probability)} · confidence ${fmt(j.confidence)}</span></div>
+    <p>${esc(j.explanation)}</p>
+    <div class="grid">
+      <div class="stat"><b>${fmt(m.pprp, 1)}</b><span>pixels per ridge</span></div>
+      <div class="stat"><b>${m.minutiae_count ?? "—"}</b><span>ridge features found</span></div>
+      <div class="stat"><b>${fmt(m.clarity)}</b><span>ridge clarity</span></div>
+      <div class="stat"><b>${esc(j.limiting_factor || "—")}</b><span>limiting factor</span></div>
+    </div>
+    ${j.zoom ? `<div class="evwrap" style="margin-bottom:14px"><img src="${j.zoom}" alt="Zoomed fingertip exposure callout"></div>
+      <p class="muted">Your own photo, optically zoomed on the fingertip — this is how much detail is already in the file you were about to post.</p>` : ""}
+    ${j.evidence ? `<details><summary>Full exposure heat map</summary><div class="evwrap" style="margin-top:12px"><img src="${j.evidence}" alt="Ridge-evidence heat map"></div>
+      <p class="muted">Warm colours mark skin where ridge detail is clearly recoverable. GATTACA shows the exposure, not the print.</p></details>` : ""}
+    ${dist ? `<details><summary>Same detail level at these camera distances</summary><table>${dist}</table></details>` : ""}
+    ${steps ? `<details><summary>How the agent reached this (${esc(j.agent.status)})</summary><ol class="trace">${steps}</ol></details>` : ""}
+    <p class="muted">Calibration: ${esc(j.calibration_source || "n/a")} · from ${esc(j.best_source || "—")}<br>${esc(j.retention || "")}</p>`;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# GATTACA, pinned and verified together on Python 3.11 (Windows x86-64), 2026-10-04.
+# OpenCV 5 with contrib (ximgproc thinning, shape TPS); headless for servers/containers.
+opencv-contrib-python-headless==5.0.0.93
+numpy==2.4.6
+scipy==1.17.1
+# service
+fastapi==0.142.2
+starlette==1.7.0
+pydantic==2.13.5
+uvicorn==0.54.0
+python-multipart==0.0.32
+# study / plots
+pandas==2.3.3
+matplotlib==3.11.2
+# tests
+pytest==9.1.1
+httpx==0.28.1

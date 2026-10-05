@@ -1,0 +1,111 @@
+DCM trained on 30 pairs
+60 probes x 47 conditions, gallery 60, variants ['rigid', 'dcm', 'dcm_rtps'], 31 workers
+  probe 1/60 done (690s)
+  probe 2/60 done (763s)
+  probe 3/60 done (763s)
+  probe 4/60 done (763s)
+  probe 5/60 done (776s)
+  probe 6/60 done (776s)
+  probe 7/60 done (776s)
+  probe 8/60 done (776s)
+  probe 9/60 done (776s)
+  probe 10/60 done (776s)
+  probe 11/60 done (861s)
+  probe 12/60 done (861s)
+  probe 13/60 done (875s)
+  probe 14/60 done (875s)
+  probe 15/60 done (875s)
+  probe 16/60 done (875s)
+  probe 17/60 done (875s)
+  probe 18/60 done (875s)
+  probe 19/60 done (875s)
+  probe 20/60 done (880s)
+  probe 21/60 done (880s)
+  probe 22/60 done (880s)
+  probe 23/60 done (880s)
+  probe 24/60 done (880s)
+  probe 25/60 done (880s)
+  probe 26/60 done (880s)
+  probe 27/60 done (880s)
+  probe 28/60 done (880s)
+  probe 29/60 done (880s)
+  probe 30/60 done (880s)
+  probe 31/60 done (880s)
+  probe 32/60 done (1054s)
+  probe 33/60 done (1098s)
+  probe 34/60 done (1098s)
+  probe 35/60 done (1098s)
+  probe 36/60 done (1098s)
+  probe 37/60 done (1098s)
+  probe 38/60 done (1098s)
+  probe 39/60 done (1122s)
+  probe 40/60 done (1122s)
+  probe 41/60 done (1122s)
+  probe 42/60 done (1161s)
+  probe 43/60 done (1166s)
+  probe 44/60 done (1166s)
+  probe 45/60 done (1166s)
+  probe 46/60 done (1166s)
+  probe 47/60 done (1167s)
+  probe 48/60 done (1167s)
+  probe 49/60 done (1167s)
+  probe 50/60 done (1167s)
+  probe 51/60 done (1167s)
+  probe 52/60 done (1167s)
+  probe 53/60 done (1167s)
+  probe 54/60 done (1167s)
+  probe 55/60 done (1167s)
+  probe 56/60 done (1167s)
+  probe 57/60 done (1183s)
+  probe 58/60 done (1183s)
+  probe 59/60 done (1183s)
+  probe 60/60 done (1183s)
+wrote C:\Users\24bcscs005\Downloads\GATTACA\study\results\synthetic.csv (2734 rows) in 1183.7 s
+condition          n  r1_rigid      r1_dcm        r1_dcm_rtps   minutiae
+none=0             60          1.00         1.00         1.00      76.1
+exposure=-1        60          1.00         1.00         1.00      74.5
+exposure=-2        60          1.00         1.00         1.00      72.6
+exposure=-3        60          1.00         1.00         1.00      69.2
+exposure=-4        60          0.97         0.97         0.97      64.4
+exposure=-5        60          1.00         0.98         0.97      59.0
+gauss=0.7          60          0.03         0.03         0.03      23.1
+gauss=0.5          60          0.05         0.05         0.03      26.3
+gauss=0.4          60          0.02         0.02         0.02      18.4
+gauss=0.3          60          0.18         0.17         0.15      54.8
+gauss=0.2          60          0.80         0.80         0.80      87.0
+gauss=0.1          60          0.98         0.98         0.98      79.4
+jpeg=95            60          1.00         1.00         1.00      75.2
+jpeg=80            60          1.00         1.00         1.00      74.3
+jpeg=60            60          1.00         1.00         1.00      73.5
+jpeg=45            60          0.98         0.98         0.98      70.6
+jpeg=30            60          0.95         0.97         0.97      64.9
+jpeg=15            60          0.47         0.45         0.42      50.5
+motion=4           60          0.02         0.02         0.02      41.7
+motion=3           60          0.05         0.05         0.05      48.4
+motion=2           60          0.15         0.13         0.15      60.3
+motion=1.5         60          0.28         0.27         0.22      72.6
+motion=1           60          0.40         0.38         0.37      71.5
+motion=0.5         60          0.97         0.97         0.95      77.0
+noise=24           60          0.32         0.32         0.33      45.2
+noise=16           60          0.78         0.78         0.78      44.9
+noise=12           60          0.92         0.92         0.90      52.5
+noise=8            60          1.00         1.00         1.00      60.5
+noise=4            60          1.00         1.00         1.00      71.5
+noise=2            60          1.00         1.00         0.98      74.8
+pprp=10            17          1.00         1.00         1.00      71.9
+pprp=8             60          1.00         1.00         1.00      74.4
+pprp=6             60          1.00         1.00         1.00      70.9
+pprp=5             60          0.98         0.98         0.98      70.0
+pprp=4             60          0.97         0.97         0.97      67.0
+pprp=3.5           60          0.90         0.90         0.88      66.6
+pprp=3             60          0.60         0.57         0.58      60.7
+pprp=2.5           60          0.17         0.15         0.17      50.3
+pprp=2             60          0.07         0.08         0.07      18.4
+pprp_jpeg=10       17          1.00         1.00         1.00      71.0
+pprp_jpeg=8        60          1.00         1.00         0.98      71.5
+pprp_jpeg=6        60          0.98         0.97         0.97      68.8
+pprp_jpeg=5        60          0.93         0.93         0.93      65.5
+pprp_jpeg=4        60          0.72         0.70         0.68      59.3
+pprp_jpeg=3.5      60          0.28         0.28         0.32      52.3
+pprp_jpeg=3        60          0.08         0.08         0.07      37.4
+pprp_jpeg=2.5      60          0.03         0.03         0.02      21.0

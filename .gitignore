@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# licensed datasets are never committed
+datasets/*/
+!datasets/__init__.py
+# local outputs
+demo/
+debug/
+study/results/*_impostors.csv
+aws/infra/cdk.out/
+aws/cool_benchmark/results/*.json
+!aws/cool_benchmark/results/.gitkeep
+# model weights are fetched by scripts/fetch_models.py
+models/*.onnx
+aws/infra/.venv-cdk/

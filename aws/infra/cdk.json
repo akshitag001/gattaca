@@ -1,0 +1,8 @@
+{
+  "app": "python app.py",
+  "context": {
+    "region": "us-east-1",
+    "instanceType": "c8g.xlarge",
+    "x86InstanceType": "c7i.xlarge"
+  }
+}

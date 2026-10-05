@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GATTACA — fingerprint exposure check</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #14171c; --muted: #5d6673; --line: #dfe3e8;
+    --accent: #2f5bd3; --accent2: #16b3a0; --high: #c62f2f; --med: #c97a06; --low: #2e8540;
+    --chip: #eef1f5; --scan: #37d0ff;
+    --radius: 16px; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 10px 30px rgba(20,23,28,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0e12; --panel: #141922; --ink: #e8ebef; --muted: #96a1b0; --line: #262d38;
+      --accent: #6f9bff; --accent2: #35e0c8; --high: #ff6b6b; --med: #f0a73a; --low: #5cc274;
+      --chip: #1d242f; --scan: #4fe0ff; --shadow: 0 10px 34px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0e12; --panel: #141922; --ink: #e8ebef; --muted: #96a1b0; --line: #262d38;
+    --accent: #6f9bff; --accent2: #35e0c8; --high: #ff6b6b; --med: #f0a73a; --low: #5cc274;
+    --chip: #1d242f; --scan: #4fe0ff; --shadow: 0 10px 34px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  .disclaimer { background: var(--ink); color: var(--bg); font-size: 13px; text-align: center; padding: 8px 16px; }
+  main { max-width: 900px; margin: 0 auto; padding: 30px 16px 56px; }
+  .brandrow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 32px; letter-spacing: .04em; margin: 0; font-weight: 800; }
+  h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text;
+            background-clip: text; -webkit-text-fill-color: transparent; }
+  .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; }
+  .lede { color: var(--muted); margin: 8px 0 22px; max-width: 64ch; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+          box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 18px; }
+  /* upload */
+  .drop { display: block; border: 2px dashed var(--line); border-radius: 13px; padding: 30px 16px; text-align: center;
+          cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
+  .drop.over { border-color: var(--accent); background: var(--chip); transform: scale(1.01); }
+  .drop input { display: none; }
+  .drop .ic { font-size: 30px; }
+  .drop strong { display: block; font-size: 17px; margin-top: 6px; }
+  .drop small { color: var(--muted); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .grow { flex: 1; }
+  label.consent { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0; font-size: 15px; }
+  label.consent input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); }
+  button { font: inherit; border: 0; border-radius: 11px; padding: 11px 18px; cursor: pointer;
+           background: var(--accent); color: #fff; font-weight: 650; transition: filter .15s, transform .05s; }
+  button:hover:not(:disabled) { filter: brightness(1.07); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button.secondary { background: var(--chip); color: var(--ink); border: 1px solid var(--line); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 8px 12px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .privacy { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+  /* crop */
+  .cropper { position: relative; display: inline-block; max-width: 100%; touch-action: none; user-select: none;
+             border-radius: 10px; overflow: hidden; }
+  .cropper img { display: block; max-width: 100%; max-height: 420px; }
+  .cropbox { position: absolute; border: 2px solid var(--scan); box-shadow: 0 0 0 9999px rgba(0,0,0,.45);
+             cursor: move; }
+  .handle { position: absolute; width: 14px; height: 14px; background: var(--scan); border: 2px solid #fff;
+            border-radius: 3px; }
+  .h-nw { left: -8px; top: -8px; cursor: nwse-resize; } .h-ne { right: -8px; top: -8px; cursor: nesw-resize; }
+  .h-sw { left: -8px; bottom: -8px; cursor: nesw-resize; } .h-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+  /* processing */
+  .stage-wrap { position: relative; border-radius: 12px; overflow: hidden; background: #05070b; }
+  .stage-wrap img { display: block; width: 100%; filter: saturate(.7) brightness(.8); }
+  .stage-wrap canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scanline { position: absolute; left: 0; right: 0; height: 3px; top: 0;
+              background: linear-gradient(90deg, transparent, var(--scan), transparent);
+              box-shadow: 0 0 16px 4px var(--scan); animation: scan 1.8s cubic-bezier(.6,0,.4,1) infinite; }
+  @keyframes scan { 0% { top: 2%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 98%; opacity: 0; } }
+  .reticle { position: absolute; inset: 0; pointer-events: none;
+             background-image: linear-gradient(var(--scan) 1px, transparent 1px),
+                               linear-gradient(90deg, var(--scan) 1px, transparent 1px);
+             background-size: 28px 28px; opacity: .08; }
+  .steps { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
+  .steps li { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14.5px;
+              opacity: .5; transition: opacity .3s, color .3s; }
+  .steps li .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line);
+                   display: grid; place-items: center; font-size: 12px; flex: none; transition: all .3s; }
+  .steps li.active { opacity: 1; color: var(--ink); }
+  .steps li.active .dot { border-color: var(--accent); color: var(--accent); }
+  .steps li.done { opacity: 1; }
+  .steps li.done .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .steps li.active .dot .spin { width: 9px; height: 9px; border: 2px solid var(--accent); border-right-color: transparent;
+                                border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pbar { height: 6px; background: var(--chip); border-radius: 99px; overflow: hidden; margin-top: 14px; }
+  .pbar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2));
+                transition: width .4s ease; }
+  /* results */
+  .headline { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .band { display: inline-block; font-weight: 800; letter-spacing: .07em; padding: 7px 16px; border-radius: 999px;
+          color: #fff; font-size: 15px; }
+  .HIGH { background: var(--high); } .MEDIUM { background: var(--med); } .LOW { background: var(--low); }
+  .meter { flex: 1 1 180px; height: 10px; background: var(--chip); border-radius: 99px; overflow: hidden; min-width: 150px; }
+  .meter > div { height: 100%; background: linear-gradient(90deg, var(--low), var(--med), var(--high));
+                 transition: width .9s ease; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+  .stat { background: var(--chip); border-radius: 11px; padding: 11px 13px; }
+  .stat b { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .evwrap { position: relative; }
+  .evwrap img { display: block; max-width: 100%; max-height: 72vh; margin: 0 auto; border-radius: 11px;
+                border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--line); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  details summary { cursor: pointer; font-weight: 600; margin-top: 6px; }
+  ol.trace { padding-left: 20px; font-size: 14px; }
+  ol.trace li { margin: 6px 0; }
+  code { background: var(--chip); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+  .err { color: var(--high); font-weight: 600; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .note { border-left: 3px solid var(--accent2); padding: 10px 14px; background: var(--chip); border-radius: 0 10px 10px 0;
+          font-size: 14px; }
+  .fmt { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: var(--chip);
+         border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+  @media (max-width: 560px) { .compare { grid-template-columns: 1fr; } h1 { font-size: 26px; } }
+  footer { text-align: center; font-size: 13px; color: var(--muted); padding: 0 16px 36px; }
+  footer a { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="disclaimer">GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.</div>
+<main>
+  <div class="brandrow">
+    <h1>GATT<span>A</span>CA</h1>
+    <span class="tag">OpenCV&nbsp;5 · AWS</span>
+  </div>
+  <p class="lede">Before you post that peace sign: see how much of your fingerprint a photo or clip of
+    <em>your own hand</em> gives away — watch it analysed stage by stage, get a recoverability score,
+    and a heat map of exactly where ridge detail is exposed.</p>
+
+  <!-- 1. upload -->
+  <section class="card" id="uploadCard">
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="image/*,video/*">
+      <div class="ic">🖐️</div>
+      <strong>Drop a photo or short video of your hand</strong>
+      <small>JPEG, PNG, MP4 or MOV, up to 25 MB — or use your camera</small>
+    </label>
+    <div class="row" style="margin-top:12px">
+      <button class="secondary" id="cameraBtn">📷 Take a photo</button>
+      <button class="secondary" id="liveBtn">🔴 Live camera</button>
+      <span class="muted grow">Your file is analysed in memory and deleted the moment the result is ready. We store nothing.</span>
+    </div>
+  </section>
+
+  <!-- live camera -->
+  <section class="card" id="liveCard" hidden>
+    <h2>Live camera</h2>
+    <p class="muted">Hold a fingertip steady, close to the lens, in good light. Watch the score climb as the
+      ridges start to resolve — that is the pixels-per-ridge threshold happening in real time.</p>
+    <div class="stage-wrap" id="liveWrap">
+      <video id="live" playsinline muted autoplay style="display:block;width:100%"></video>
+      <div class="reticle"></div>
+      <div class="scanline" id="liveScan" hidden></div>
+      <div id="liveBadge" style="position:absolute;top:12px;left:12px;display:none;align-items:center;gap:10px">
+        <span class="band" id="liveBand">—</span>
+        <span style="background:rgba(0,0,0,.6);color:#fff;border-radius:99px;padding:5px 12px;font-size:13px"
+              id="liveMeta"></span>
+      </div>
+    </div>
+    <label class="consent"><input type="checkbox" id="liveConsent">
+      <span>This is <strong>my own hand</strong>, and I consent to these frames being processed for this assessment.</span></label>
+    <div class="row">
+      <button id="scanNow" disabled>⚡ Scan this frame</button>
+      <button class="secondary" id="autoScan" disabled>▶ Auto-scan</button>
+      <button class="secondary" id="liveMin" hidden>🔬 Minutiae (research)</button>
+      <button class="ghost grow" style="text-align:right" id="stopLive">Stop camera</button>
+    </div>
+    <p class="privacy" id="liveNote">Frames are sent one at a time, scored in memory and discarded. Nothing is recorded.</p>
+  </section>
+
+  <section class="card" id="minCard" hidden></section>
+
+  <!-- 2. crop -->
+  <section class="card" id="cropCard" hidden>
+    <h2>Frame your fingertips</h2>
+    <p class="muted">Drag the box to crop to the hand (optional — a tighter crop measures ridge detail more accurately). Videos skip this step.</p>
+    <div id="cropHost"></div>
+    <label class="consent"><input type="checkbox" id="consent">
+      <span>This is a photo or video of <strong>my own hand</strong>, and I consent to it being processed for this assessment.</span></label>
+    <div class="row">
+      <button id="go" disabled>✨ Analyse exposure</button>
+      <button class="secondary" id="resetCrop" hidden>Reset crop</button>
+      <button class="ghost" id="startOver">Choose a different file</button>
+      <button class="ghost grow" style="text-align:right" id="protect" disabled>Protect my photo</button>
+    </div>
+  </section>
+
+  <!-- 3. processing -->
+  <section class="card" id="procCard" hidden>
+    <h2 id="procTitle">Analysing…</h2>
+    <div class="stage-wrap" id="stageWrap">
+      <img id="stageImg" alt="">
+      <canvas class="fx" id="fx"></canvas>
+      <div class="reticle"></div>
+      <div class="scanline"></div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div class="pbar"><div id="pfill"></div></div>
+  </section>
+
+  <div id="status" aria-live="polite"></div>
+  <section id="result" class="card" hidden></section>
+  <section id="protected" class="card" hidden></section>
+
+  <!-- education -->
+  <details class="card">
+    <summary>What format are fingerprints actually stored in? (and what GATTACA will not give you)</summary>
+    <p class="muted" style="margin-top:12px">Forensic and biometric systems rarely store a picture of a ridge. They store a compact
+      <strong>minutiae template</strong>: a list of the points where ridges end or split, each as a position, an angle and a type.</p>
+    <div class="fmt">ISO/IEC 19794-2 minutiae record (one finger)
+┌──────────┬──────────┬────────────┬─────────────┬──────────┐
+│   x (px) │   y (px) │ angle (°)  │ type        │ quality  │
+├──────────┼──────────┼────────────┼─────────────┼──────────┤
+│    182   │    96    │    41      │ ridge-ending│   74     │
+│    204   │   158    │   126      │ bifurcation │   88     │
+│     …    │    …     │    …       │     …       │    …     │
+└──────────┴──────────┴────────────┴─────────────┴──────────┘
+Related standards: ANSI/NIST-ITL 1-2011 (exchange), WSQ (500-ppi image compression).</div>
+    <div class="note" style="margin-top:12px"><strong>GATTACA deliberately does not emit this.</strong> It reports how many
+      ridge features it found and how clearly, but never their coordinates, never a template, and never a clean, enhanced
+      ridge image you could feed to a matcher. That is the whole point: a privacy-awareness tool must not become the
+      extraction tool it warns you about. The heat map below shows <em>where</em> and <em>how much</em> is exposed — not the
+      print itself.</div>
+  </details>
+</main>
+<footer>GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.<br>
+  OpenCV AI Competition 2026 · <a href="/health">service status</a></footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d = 2) => (v === null || v === undefined) ? "—" : Number(v).toFixed(d);
+
+const STAGES = [
+  "Locating hand & fingertips (neural detector)",
+  "Isolating the distal phalanx",
+  "Rectifying & unrolling the finger surface",
+  "Measuring ridge resolution (pixels per ridge)",
+  "Reconstructing ridge evidence",
+  "Scoring recoverability",
+];
+
+let file = null, isVideo = false, imgEl = null, crop = null, dragMode = null, dragStart = null;
+
+/* ---------------- file selection ---------------- */
+function reset() {
+  file = null; isVideo = false; imgEl = null; crop = null;
+  $("result").hidden = true; $("protected").hidden = true; $("procCard").hidden = true;
+  $("cropCard").hidden = true; $("uploadCard").hidden = false; $("status").innerHTML = "";
+  $("consent").checked = false; $("file").value = "";
+}
+function refresh() {
+  const ok = file && $("consent").checked;
+  $("go").disabled = !ok;
+  $("protect").disabled = !(ok && !isVideo);
+}
+function pick(f) {
+  if (!f) return;
+  file = f; isVideo = f.type.startsWith("video");
+  $("uploadCard").hidden = true; $("cropCard").hidden = false;
+  $("result").hidden = true; $("protected").hidden = true;
+  const host = $("cropHost");
+  if (isVideo) {
+    host.innerHTML = `<video src="${URL.createObjectURL(f)}" controls muted playsinline
+      style="max-width:100%;max-height:360px;border-radius:10px"></video>
+      <p class="muted">The agent will pick the sharpest frames and fuse them automatically.</p>`;
+    $("resetCrop").hidden = true;
+  } else {
+    buildCropper(URL.createObjectURL(f));
+  }
+  refresh();
+}
+$("file").addEventListener("change", e => pick(e.target.files[0]));
+$("consent").addEventListener("change", refresh);
+$("startOver").addEventListener("click", reset);
+$("cameraBtn").addEventListener("click", () => {
+  const i = $("file"); i.setAttribute("capture", "environment"); i.click();
+  setTimeout(() => i.removeAttribute("capture"), 500);
+});
+const drop = $("drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => pick(e.dataTransfer.files[0]));
+
+/* ---------------- cropper ---------------- */
+function buildCropper(url) {
+  const host = $("cropHost");
+  host.innerHTML = `<div class="cropper" id="cropper"><img id="cimg" alt="your hand">
+    <div class="cropbox" id="cbox">
+      <div class="handle h-nw" data-h="nw"></div><div class="handle h-ne" data-h="ne"></div>
+      <div class="handle h-sw" data-h="sw"></div><div class="handle h-se" data-h="se"></div>
+    </div></div>`;
+  imgEl = $("cimg");
+  imgEl.onload = () => {
+    const w = imgEl.clientWidth, h = imgEl.clientHeight;
+    crop = { x: w * 0.15, y: h * 0.1, w: w * 0.7, h: h * 0.8 };
+    drawCrop();
+  };
+  imgEl.src = url;
+  $("resetCrop").hidden = false;
+  const box = $("cbox");
+  box.addEventListener("pointerdown", e => startDrag(e, e.target.dataset.h || "move"));
+  window.addEventListener("pointermove", onDrag);
+  window.addEventListener("pointerup", () => { dragMode = null; });
+}
+function drawCrop() {
+  const b = $("cbox");
+  b.style.left = crop.x + "px"; b.style.top = crop.y + "px";
+  b.style.width = crop.w + "px"; b.style.height = crop.h + "px";
+}
+function startDrag(e, mode) { e.preventDefault(); dragMode = mode; dragStart = { x: e.clientX, y: e.clientY, c: { ...crop } }; }
+function onDrag(e) {
+  if (!dragMode || !imgEl) return;
+  const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y, c = dragStart.c;
+  const W = imgEl.clientWidth, H = imgEl.clientHeight, min = 30;
+  let n = { ...c };
+  if (dragMode === "move") {
+    n.x = Math.min(Math.max(0, c.x + dx), W - c.w);
+    n.y = Math.min(Math.max(0, c.y + dy), H - c.h);
+  } else {
+    if (dragMode.includes("e")) n.w = Math.min(Math.max(min, c.w + dx), W - c.x);
+    if (dragMode.includes("s")) n.h = Math.min(Math.max(min, c.h + dy), H - c.y);
+    if (dragMode.includes("w")) { const nx = Math.min(Math.max(0, c.x + dx), c.x + c.w - min); n.x = nx; n.w = c.w + (c.x - nx); }
+    if (dragMode.includes("n")) { const ny = Math.min(Math.max(0, c.y + dy), c.y + c.h - min); n.y = ny; n.h = c.h + (c.y - ny); }
+  }
+  crop = n; drawCrop();
+}
+$("resetCrop").addEventListener("click", () => {
+  if (!imgEl) return;
+  crop = { x: 0, y: 0, w: imgEl.clientWidth, h: imgEl.clientHeight }; drawCrop();
+});
+async function croppedBlob() {
+  if (isVideo || !imgEl || !crop) return file;
+  const sx = imgEl.naturalWidth / imgEl.clientWidth, sy = imgEl.naturalHeight / imgEl.clientHeight;
+  const full = crop.w >= imgEl.clientWidth - 2 && crop.h >= imgEl.clientHeight - 2;
+  if (full) return file;
+  const cw = Math.round(crop.w * sx), ch = Math.round(crop.h * sy);
+  const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+  cv.getContext("2d").drawImage(imgEl, Math.round(crop.x * sx), Math.round(crop.y * sy), cw, ch, 0, 0, cw, ch);
+  return await new Promise(r => cv.toBlob(r, "image/jpeg", 0.95));
+}
+
+/* ---------------- processing animation ---------------- */
+let fxRAF = null;
+function startFx() {
+  const cv = $("fx"), wrap = $("stageWrap");
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  function size() { cv.width = wrap.clientWidth * dpr; cv.height = wrap.clientHeight * dpr; }
+  size();
+  const ctx = cv.getContext("2d");
+  const N = 46, nodes = Array.from({ length: N }, () => ({
+    x: Math.random() * cv.width, y: Math.random() * cv.height,
+    vx: (Math.random() - .5) * 0.25 * dpr, vy: (Math.random() - .5) * 0.25 * dpr
+  }));
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--scan").trim() || "#37d0ff";
+  function frame() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    for (const n of nodes) {
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 0 || n.x > cv.width) n.vx *= -1;
+      if (n.y < 0 || n.y > cv.height) n.vy *= -1;
+    }
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const a = nodes[i], b = nodes[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 120 * dpr) {
+        ctx.globalAlpha = (1 - d / (120 * dpr)) * 0.35;
+        ctx.strokeStyle = col; ctx.lineWidth = dpr;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 0.9; ctx.fillStyle = col;
+    for (const n of nodes) { ctx.beginPath(); ctx.arc(n.x, n.y, 2 * dpr, 0, 7); ctx.fill(); }
+    fxRAF = requestAnimationFrame(frame);
+  }
+  frame();
+}
+function stopFx() { if (fxRAF) cancelAnimationFrame(fxRAF); fxRAF = null; }
+function renderSteps(active) {
+  $("steps").innerHTML = STAGES.map((s, i) => {
+    const cls = i < active ? "done" : i === active ? "active" : "";
+    const mark = i < active ? "✓" : i === active ? '<span class="spin"></span>' : (i + 1);
+    return `<li class="${cls}"><span class="dot">${mark}</span>${esc(s)}</li>`;
+  }).join("");
+  $("pfill").style.width = Math.round((active / STAGES.length) * 100) + "%";
+}
+async function runAnimation(previewUrl) {
+  $("procCard").hidden = false; $("procTitle").textContent = isVideo ? "Analysing frames…" : "Analysing…";
+  $("stageImg").src = previewUrl || "";
+  renderSteps(0); startFx();
+  let step = 0;
+  const timer = setInterval(() => { if (step < STAGES.length - 1) renderSteps(++step); }, 520);
+  return () => { clearInterval(timer); renderSteps(STAGES.length); $("pfill").style.width = "100%"; stopFx(); };
+}
+
+/* ---------------- request + results ---------------- */
+async function post(path, blob) {
+  const fd = new FormData();
+  fd.append("file", blob, isVideo ? (file.name || "clip.mp4") : "hand.jpg");
+  fd.append("consent", $("consent").checked ? "true" : "false");
+  const r = await fetch(path, { method: "POST", body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || `Request failed (${r.status})`);
+  return j;
+}
+
+$("go").addEventListener("click", async () => {
+  $("result").hidden = true; $("status").innerHTML = "";
+  const blob = await croppedBlob();
+  const preview = isVideo ? "" : URL.createObjectURL(blob);
+  const finish = await runAnimation(preview);
+  const started = Date.now();
+  try {
+    const j = await post("/api/score", blob);
+    const wait = Math.max(0, 2600 - (Date.now() - started));   // let the animation breathe
+    await new Promise(r => setTimeout(r, wait));
+    finish();
+    await new Promise(r => setTimeout(r, 350));
+    $("procCard").hidden = true;
+    renderResult(j);
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    finish(); $("procCard").hidden = true;
+    $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`;
+  }
+});
+
+$("protect").addEventListener("click", async () => {
+  $("status").innerHTML = `<p class="muted">Suppressing ridge detail on your fingertips and re-checking…</p>`;
+  try {
+    const blob = await croppedBlob();
+    const j = await post("/api/protect", blob);
+    $("protected").hidden = false;
+    $("protected").innerHTML = `
+      <h2>Protected copy</h2>
+      <div class="compare">
+        <div><p class="muted">Before</p><span class="band ${j.before.band}">${j.before.band}</span> <span class="muted">P = ${fmt(j.before.probability)}</span></div>
+        <div><p class="muted">After</p><span class="band ${j.after.band}">${j.after.band}</span> <span class="muted">P = ${fmt(j.after.probability)}</span></div>
+      </div>
+      <p><img src="${j.protected_image}" alt="Protected photo" style="max-width:100%;border-radius:11px;margin-top:12px"></p>
+      <p><a download="protected.jpg" href="${j.protected_image}">⬇ Download protected photo</a></p>
+      <p class="muted">${esc(j.retention)}</p>`;
+    $("status").innerHTML = "";
+    $("protected").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+});
+
+/* ---------------- live camera ---------------- */
+let stream = null, autoTimer = null, scanning = false, researchMode = false;
+
+fetch("/health").then(r => r.json()).then(h => { researchMode = !!h.research_mode; })
+  .catch(() => {});
+
+function liveRefresh() {
+  const ok = stream && $("liveConsent").checked;
+  $("scanNow").disabled = !ok;
+  $("autoScan").disabled = !ok;
+  $("liveMin").hidden = !(ok && researchMode);
+}
+$("liveConsent").addEventListener("change", liveRefresh);
+
+$("liveBtn").addEventListener("click", async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+  } catch (e) {
+    $("status").innerHTML = `<p class="err">Could not open the camera: ${esc(e.message)}. ` +
+      `Browsers only allow camera access on <code>https://</code> or <code>localhost</code>.</p>`;
+    return;
+  }
+  $("live").srcObject = stream;
+  $("uploadCard").hidden = true; $("cropCard").hidden = true; $("liveCard").hidden = false;
+  liveRefresh();
+});
+
+function stopLive() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; $("autoScan").textContent = "▶ Auto-scan"; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  $("liveCard").hidden = true; $("minCard").hidden = true; $("uploadCard").hidden = false;
+  $("liveBadge").style.display = "none";
+}
+$("stopLive").addEventListener("click", stopLive);
+window.addEventListener("beforeunload", stopLive);
+
+function grabFrame() {
+  const v = $("live");
+  if (!v.videoWidth) return null;
+  const cv = document.createElement("canvas");
+  cv.width = v.videoWidth; cv.height = v.videoHeight;
+  cv.getContext("2d").drawImage(v, 0, 0);
+  return new Promise(r => cv.toBlob(r, "image/jpeg", 0.95));
+}
+
+async function liveScan(full) {
+  if (scanning) return;
+  const blob = await grabFrame();
+  if (!blob) return;
+  scanning = true; $("liveScan").hidden = false;
+  const prevIsVideo = isVideo; isVideo = false;
+  const prevFile = file; file = { name: "frame.jpg", type: "image/jpeg" };
+  const prevConsent = $("consent").checked; $("consent").checked = $("liveConsent").checked;
+  try {
+    const j = await post("/api/score", blob);
+    $("liveBadge").style.display = "flex";
+    $("liveBand").className = "band " + j.band;
+    $("liveBand").textContent = j.band;
+    const m = j.metrics || {};
+    $("liveMeta").textContent = `P ${fmt(j.probability)} · ${fmt(m.pprp, 1)} px/ridge · `
+      + `${m.minutiae_count ?? 0} features · ${esc(j.limiting_factor || "")}`;
+    if (full) { renderResult(j); $("result").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  } catch (e) {
+    $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`;
+  } finally {
+    isVideo = prevIsVideo; file = prevFile; $("consent").checked = prevConsent;
+    scanning = false; $("liveScan").hidden = true;
+  }
+}
+
+$("scanNow").addEventListener("click", () => liveScan(true));
+$("autoScan").addEventListener("click", () => {
+  if (autoTimer) {
+    clearInterval(autoTimer); autoTimer = null; $("autoScan").textContent = "▶ Auto-scan";
+  } else {
+    $("autoScan").textContent = "⏸ Stop auto-scan";
+    liveScan(false);
+    autoTimer = setInterval(() => liveScan(false), 2000);
+  }
+});
+
+$("liveMin").addEventListener("click", async () => {
+  const blob = await grabFrame();
+  if (!blob) return;
+  const prevIsVideo = isVideo; isVideo = false;
+  const prevFile = file; file = { name: "frame.jpg", type: "image/jpeg" };
+  const prevConsent = $("consent").checked; $("consent").checked = $("liveConsent").checked;
+  $("status").innerHTML = `<p class="muted">Extracting minutiae from this frame…</p>`;
+  try {
+    const j = await post("/api/minutiae", blob);
+    $("minCard").hidden = false;
+    $("minCard").innerHTML = `
+      <h2>Forensic minutiae — live frame <span class="tag">research mode</span></h2>
+      <div class="grid">
+        <div class="stat"><b>${j.minutiae_count}</b><span>minutiae</span></div>
+        <div class="stat"><b>${j.endings}</b><span>ridge endings</span></div>
+        <div class="stat"><b>${j.bifurcations}</b><span>bifurcations</span></div>
+        <div class="stat"><b>${fmt(j.pprp, 1)}</b><span>px per ridge</span></div>
+      </div>
+      <div class="evwrap"><img src="${j.chart}" alt="Minutiae extraction chart"></div>
+      <div class="note" style="margin-top:12px">${esc(j.note)}</div>
+      <p class="muted">${esc(j.retention)}</p>`;
+    $("status").innerHTML = "";
+    $("minCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    $("status").innerHTML = `<p class="err">${esc(e.message)}</p>`;
+  } finally {
+    isVideo = prevIsVideo; file = prevFile; $("consent").checked = prevConsent;
+  }
+});
+
+function renderResult(j) {
+  const m = j.metrics || {};
+  const trace = (j.agent && j.agent.trace) || [];
+  const steps = trace.filter(e => e.kind === "decision").map(e => {
+    const res = trace.find(r => r.kind === "result" && r.step === e.step + 1);
+    const a = res && res.observation && res.observation.assessment;
+    const out = a && a.band ? ` → <span class="band ${a.band}" style="font-size:11px;padding:2px 8px">${a.band}</span> P=${fmt(a.probability)}` : "";
+    return `<li><code>${esc(e.rule)}</code> <b>${esc(e.action)}</b>: ${esc(e.reason)}${out}</li>`;
+  }).join("");
+  const dist = (j.distances || []).map(d => `<tr><td>${esc(d.camera)}</td><td class="num">${fmt(d.distance_cm, 0)} cm</td></tr>`).join("");
+  $("result").hidden = false;
+  $("result").innerHTML = `
+    <div class="headline"><span class="band ${j.band}">${j.band}</span>
+      <div class="meter" title="Estimated probability the print is identifiable"><div style="width:${Math.round((j.probability || 0) * 100)}%"></div></div>
+      <span class="muted">P(identifiable) ${fmt(j.probability)} · confidence ${fmt(j.confidence)}</span></div>
+    <p>${esc(j.explanation)}</p>
+    <div class="grid">
+      <div class="stat"><b>${fmt(m.pprp, 1)}</b><span>pixels per ridge</span></div>
+      <div class="stat"><b>${m.minutiae_count ?? "—"}</b><span>ridge features found</span></div>
+      <div class="stat"><b>${fmt(m.clarity)}</b><span>ridge clarity</span></div>
+      <div class="stat"><b>${esc(j.limiting_factor || "—")}</b><span>limiting factor</span></div>
+    </div>
+    ${j.evidence ? `<div class="evwrap"><img src="${j.evidence}" alt="Ridge-evidence heat map over your photo"></div>
+      <p class="muted">Warm colours mark skin where ridge detail is clearly recoverable. GATTACA shows the exposure, not the print itself.</p>` : ""}
+    ${dist ? `<details><summary>Same detail level at these camera distances</summary><table>${dist}</table>
+      <p class="muted">Derived from the measured pixels-per-ridge and a stated camera model, not from your photo's metadata.</p></details>` : ""}
+    ${steps ? `<details><summary>How the agent reached this (${esc(j.agent.status)})</summary><ol class="trace">${steps}</ol></details>` : ""}
+    <p class="muted">Calibration: ${esc(j.calibration_source || "n/a")} · Best estimate from ${esc(j.best_source || "—")}<br>${esc(j.retention || "")}</p>`;
+}
+</script>
+</body>
+</html>
