@@ -119,6 +119,36 @@
   .card .big em{font-family:"Instrument Serif",serif;font-style:italic;color:var(--accent);font-weight:400}
   .card p{color:var(--muted);font-size:14.5px;margin:10px 0 0;line-height:1.6}
   .secpad{padding:96px 0}
+  /* ISO minutiae record table */
+  .record{margin-top:28px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+  .record-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+               padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel2);
+               font-size:11.5px;letter-spacing:.14em;color:var(--accent)}
+  .rec-dim{color:var(--dim);letter-spacing:.1em}
+  .record-scroll{overflow-x:auto}
+  .record-table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+  .record-table th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;
+                   text-transform:uppercase;color:var(--dim);font-weight:500;text-align:right;
+                   padding:12px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .record-table th:nth-child(1),.record-table th:nth-child(5){text-align:left}
+  .record-table td{font-family:"JetBrains Mono",monospace;text-align:right;padding:13px 18px;
+                   border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;color:var(--ink);
+                   white-space:nowrap}
+  .record-table tbody tr:last-child td{border-bottom:0}
+  .record-table tbody tr:hover{background:var(--panel2)}
+  .record-table td.rec-i{text-align:left;color:var(--dim)}
+  .record-table td:nth-child(5){text-align:left}
+  .mtype{display:inline-block;font-family:Inter,sans-serif;font-size:12px;padding:3px 10px;border-radius:999px;
+         border:1px solid transparent}
+  .mtype.end{color:#f0b35a;background:rgba(232,163,61,.12);border-color:rgba(232,163,61,.3)}
+  .mtype.bif{color:#9ec46a;background:rgba(126,154,78,.14);border-color:rgba(126,154,78,.35)}
+  .rec-q{color:var(--muted)}
+  .qbar{display:inline-block;width:46px;height:5px;border-radius:99px;background:var(--line);
+        margin-right:10px;vertical-align:middle;overflow:hidden}
+  .qbar i{display:block;height:100%;background:var(--accent)}
+  .record-foot{padding:14px 18px;font-size:13.5px;color:var(--muted);line-height:1.6;
+               border-top:1px solid var(--line);background:var(--panel2)}
+  .record-foot b{color:var(--ink);font-weight:600}
   /* claim vs reality */
   .vs{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:36px}
   .vs-card{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
@@ -454,15 +484,41 @@
       <strong>minutiae template</strong>: the points where ridges end or split, each as a position, an angle
       and a type.</p>
   </div>
-  <div class="fmt fade" style="margin-top:26px">ISO/IEC 19794-2 minutiae record (one finger)
-┌──────────┬──────────┬────────────┬─────────────┬──────────┐
-│   x (px) │   y (px) │ angle (°)  │ type        │ quality  │
-├──────────┼──────────┼────────────┼─────────────┼──────────┤
-│    182   │    96    │    41      │ ridge-ending│   74     │
-│    204   │   158    │   126      │ bifurcation │   88     │
-│     …    │    …     │    …       │     …       │    …     │
-└──────────┴──────────┴────────────┴─────────────┴──────────┘
-Related: ANSI/NIST-ITL 1-2011 (exchange) · WSQ (500-ppi compression)</div>
+  <div class="record fade">
+    <div class="record-head">
+      <span class="mono">ISO/IEC 19794-2 &middot; FINGER MINUTIAE RECORD</span>
+      <span class="mono rec-dim">1 finger &middot; showing 3 of 34</span>
+    </div>
+    <div class="record-scroll">
+      <table class="record-table">
+        <thead>
+          <tr><th>#</th><th>x&nbsp;(px)</th><th>y&nbsp;(px)</th><th>angle</th><th>type</th><th>quality</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rec-i">01</td><td>182</td><td>96</td><td>41&deg;</td>
+            <td><span class="mtype end">ridge ending</span></td>
+            <td class="rec-q"><span class="qbar"><i style="width:74%"></i></span>74</td>
+          </tr>
+          <tr>
+            <td class="rec-i">02</td><td>204</td><td>158</td><td>126&deg;</td>
+            <td><span class="mtype bif">bifurcation</span></td>
+            <td class="rec-q"><span class="qbar"><i style="width:88%"></i></span>88</td>
+          </tr>
+          <tr>
+            <td class="rec-i">03</td><td>97</td><td>233</td><td>309&deg;</td>
+            <td><span class="mtype end">ridge ending</span></td>
+            <td class="rec-q"><span class="qbar"><i style="width:61%"></i></span>61</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="record-foot">
+      A full record also carries a header (format id, capture device, image size, ppi) and optional
+      ridge-count and core/delta data. Related: <b>ANSI/NIST-ITL 1-2011</b> (exchange) &middot;
+      <b>WSQ</b> (500-ppi compression).
+    </div>
+  </div>
   <div class="note fade" style="margin-top:20px"><strong>GATTACA deliberately does not emit this.</strong>
     It reports how many ridge features it found and how clearly — never their coordinates, never a template,
     never a clean enhanced print you could feed to a matcher. A privacy-awareness tool must not become the
