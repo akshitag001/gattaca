@@ -15,3 +15,8 @@ aws/cool_benchmark/results/*.json
 # model weights are fetched by scripts/fetch_models.py
 models/*.onnx
 aws/infra/.venv-cdk/
+
+# third-party media (news screenshots, reels) never belongs in the repo
+*.mp4
+*.mov
+!demo/*.mp4
