@@ -7,13 +7,23 @@
 [![tests](https://github.com/akshitag001/gattaca/actions/workflows/tests.yml/badge.svg)](https://github.com/akshitag001/gattaca/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![opencv](https://img.shields.io/badge/OpenCV-5.0.0-5C3EE8?logo=opencv&logoColor=white)
-![aws](https://img.shields.io/badge/AWS-Graviton4%20%2B%20COOL-FF9900?logo=amazonaws&logoColor=white)
+![aws](https://img.shields.io/badge/AWS-EC2%20live-FF9900?logo=amazonaws&logoColor=white)
 
 OpenCV AI Competition 2026 · powered by AWS
 
 </div>
 
 > GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.
+
+### For judges
+
+| | |
+|---|---|
+| **Live endpoint (AWS EC2)** | **http://16.176.2.43:8000** · health check: [`/health`](http://16.176.2.43:8000/health) |
+| **Technical report** | [`docs/technical_report.md`](docs/technical_report.md) |
+| **Architecture diagrams** | [`docs/architecture.md`](docs/architecture.md) |
+| **Agentic Vision evidence** | trace + human-control tests: [How it works → The agent](#the-agent-agentic-vision), [`tests/test_video_agent.py`](tests/test_video_agent.py) |
+| **Run it locally** | [Quickstart](#quickstart): 4 commands, 43 tests |
 
 ---
 
@@ -141,8 +151,8 @@ gattaca/            pipeline/  video/  agent/  analyze · assess · scoring · e
 service/            api.py (FastAPI) · web/ (landing page + tool)
 study/              degrade · run_study · calibrate · plots · results/ (raw CSVs)
 datasets/           loader.py (FingerprintPair) · README (access requests)
-aws/                infra/ (CDK) · cool_benchmark/ (COOL vs x86)
-docs/               research_notes · recoverability_metric · architecture · responsible_use · image_brief
+aws/                minimal_deploy.sh (live path) · DEPLOY.md · infra/ (CDK) · cool_benchmark/
+docs/               technical_report · research_notes · recoverability_metric · architecture · responsible_use · image_brief
 tests/              43 tests
 ```
 
@@ -162,14 +172,15 @@ Seeds are fixed. Raw outputs are CSV, so every plot can be regenerated without r
 
 ## Deployment
 
-API Gateway → ALB → an Auto Scaling group of **Graviton4 (c8g) instances running the COOL AMI** (Cloud Optimized OpenCV v3.1, OpenCV 5.0). S3 holds datasets and results; the uploads bucket has a 1-day expiry backstop, though the service never writes uploads there. The CDK stack synthesises to 50 CloudFormation resources.
+**Live now:** one EC2 instance (Ubuntu 24.04, x86_64, `ap-southeast-2` Sydney) runs the FastAPI service under systemd. Every request executes the full OpenCV 5 pipeline on that instance: detection, rectification, Gabor enhancement, extraction, scoring and the evidence map. Setup is one script: [`aws/minimal_deploy.sh`](aws/minimal_deploy.sh).
 
 ```bash
-cd aws/infra && pip install -r requirements.txt
-cdk deploy -c coolAmiId=<ami-id> -c artifactBucket=<bucket> [-c withX86Baseline=true]
+# on a fresh Ubuntu EC2 instance (port 8000 open in its security group)
+git clone https://github.com/akshitag001/gattaca.git
+bash gattaca/aws/minimal_deploy.sh ~/gattaca
 ```
 
-[`aws/cool_benchmark`](aws/cool_benchmark) runs the identical seeded workload on COOL/Graviton and stock-OpenCV/x86. It reports per-kernel speed-ups, latency, throughput and $/1k photos, plus provenance (`cv2.__file__`, KleidiCV flag, instance type) proving which build ran. Details: [docs/architecture.md](docs/architecture.md).
+**Designed scale-out path (not deployed):** [`aws/infra`](aws/infra) is a CDK stack for API Gateway → ALB → an Auto Scaling group of Graviton4 instances on the Cloud Optimized OpenCV (COOL) AMI, with S3 for datasets and results. It synthesises to 50 CloudFormation resources, and [`aws/cool_benchmark`](aws/cool_benchmark) is a ready harness comparing COOL/Graviton against stock OpenCV/x86. Neither has been run, so **this entry does not claim the Best Use of COOL award.** Runbook: [`aws/DEPLOY.md`](aws/DEPLOY.md).
 
 ## Status
 
@@ -178,8 +189,9 @@ cdk deploy -c coolAmiId=<ami-id> -c artifactBucket=<bucket> [-c withX86Baseline=
 | OpenCV 5 pipeline, video path, agent, web service, protection | ✅ built, 43 tests passing |
 | Neural hand detector (`cv2.dnn`) on real photos | ✅ 5/5 fingers found on each of three real test photos (portrait V-sign, phone V-sign, open palm) |
 | Measurement study + calibration | ✅ on synthetic data · ⏳ re-run on HKPolyU / RidgeBase pending dataset access |
-| AWS stack | ✅ synthesises · ⏳ deployment |
-| COOL vs x86 benchmark | ✅ harness · ⏳ numbers from a Graviton run |
+| AWS deployment | ✅ **live** on EC2 at http://16.176.2.43:8000 (single instance) |
+| CDK scale-out stack (ALB + ASG + COOL) | ✅ synthesises · not deployed |
+| COOL vs x86 benchmark | ✅ harness · not run, COOL award not claimed |
 
 ## Responsible use
 

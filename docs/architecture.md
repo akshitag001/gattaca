@@ -2,7 +2,26 @@
 
 > GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.
 
-## 1. System on AWS (OpenCV 5 + COOL on Graviton)
+## 1. What is deployed (live)
+
+```mermaid
+flowchart LR
+  user([User's browser<br/>own-hand photo / clip / live camera<br/>+ consent]) -->|HTTP :8000| ec2
+  subgraph aws[AWS · ap-southeast-2]
+    subgraph ec2[EC2 instance · Ubuntu 24.04 · x86_64]
+      svc[systemd → uvicorn<br/>service.api FastAPI]
+      cv[OpenCV 5.0.0 pipeline<br/>cv2.dnn detect → rectify → Gabor enhance →<br/>thinning + minutiae → calibrated score → heat map]
+      agent[agent loop<br/>perceive → decide → act on video]
+      svc --> cv
+      svc --> agent --> cv
+    end
+  end
+  svc -.->|uploads decoded in memory,<br/>video temp file deleted in finally| mem[(nothing persisted)]
+```
+
+Live at **http://16.176.2.43:8000**, set up with one script (`aws/minimal_deploy.sh`). Every scoring request runs the full OpenCV 5 workload on this instance. It does not use COOL or Graviton.
+
+## 1b. Designed scale-out architecture (CDK, not deployed)
 
 ```mermaid
 flowchart LR

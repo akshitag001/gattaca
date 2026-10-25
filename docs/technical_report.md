@@ -106,11 +106,13 @@ The LOW measurement on the first frame caused the fusion call; the fused result'
 
 **Architecture (designed, full scale-out path — `aws/infra`, CDK):** API Gateway → Application Load Balancer → an Auto Scaling group of Graviton4 (`c8g`) instances running the **Cloud-Optimized OpenCV Library (COOL) v3.1 AMI**, with S3 for datasets, study results, and a transient upload bucket (1-day lifecycle expiry as a backstop — the service itself never persists an upload; see §8). The CDK stack synthesizes cleanly to 50 CloudFormation resources. `aws/cool_benchmark` is a harness that runs an identical seeded workload on COOL/Graviton and on a stock-OpenCV x86 baseline, recording per-kernel speed-ups, latency, throughput, cost, and **provenance** (`cv2.__file__`, the KleidiCV build flag, `platform.machine()`, EC2 instance type via IMDS) as evidence of which build served the request.
 
-**What is actually running at submission time:** given the build-phase timeline, the deployed instance is a single Graviton (`t4g.small`, `arm64`) EC2 instance running the same FastAPI service directly (no ALB/ASG — the cost- and time-minimal path), reachable at:
+**What is actually running at submission time:** a single EC2 instance (Ubuntu 24.04, **x86_64**, region `ap-southeast-2`, Sydney) running the FastAPI service directly under systemd, with no ALB, Auto Scaling or API Gateway. This was the fastest and cheapest path inside the build window. It is reachable at:
 
-> **`http://<INSTANCE_PUBLIC_IP>:8000`** — filled in once the account's identity verification clears; see the submission form for the live value.
+> **http://16.176.2.43:8000** (health: `/health`)
 
-This still satisfies "a meaningful component on AWS" and "a working web endpoint": the full OpenCV 5 pipeline (detection, enhancement, Gabor filtering, extraction, scoring) executes on that Graviton instance for every request. The fuller ALB/ASG/COOL architecture remains in the repository (`aws/infra`, `aws/DEPLOY.md`) as the designed production path, and is the basis for a Best-Use-of-COOL submission if time allows a redeploy onto the COOL AMI before judging closes.
+Verified from outside AWS on 26 Oct 2026: the landing page and assets load; a scoring request runs the full OpenCV 5 pipeline on the instance (detection, rectification, Gabor enhancement, extraction, calibrated scoring, evidence map) and returns a band, probability, heat map and zoom callout; requests without the consent flag are rejected with HTTP 400; and the research-only minutiae endpoint returns HTTP 404, as designed for a public host.
+
+This satisfies "a meaningful component on AWS" and "a working web endpoint". **It does not use COOL or Graviton**, so this entry does **not** claim the Best Use of COOL award. The ALB/ASG/COOL stack in `aws/infra` and the benchmark harness in `aws/cool_benchmark` are complete and synthesise cleanly, but were not deployed or run.
 
 **x86 ↔ Arm coexistence:** every pinned dependency (`opencv-contrib-python-headless`, numpy, scipy) ships `manylinux` wheels for both `x86_64` and `aarch64`, so the identical codebase and `Dockerfile` run unmodified on either architecture. COOL adds Arm-specific kernels beneath the same `cv2` API — no GATTACA code is architecture-specific.
 
@@ -156,7 +158,7 @@ python -m pytest -q                                      # 43 tests, ~30 s
 uvicorn service.api:app --port 8000                       # local web UI + API
 ```
 
-AWS deployment: `aws/DEPLOY.md` (minimal single-instance path) and `aws/infra` + `aws/DEPLOY.md` §Phase 3 (full ALB/ASG/COOL CDK path).
+AWS deployment: `aws/minimal_deploy.sh` (the live single-instance path, one command on a fresh Ubuntu EC2 instance) and `aws/DEPLOY.md` + `aws/infra` (the designed ALB/ASG/COOL CDK path).
 
 ## 11. References
 

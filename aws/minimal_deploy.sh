@@ -3,7 +3,7 @@
 # (EC2 Instance Connect, in-browser — no SSH key needed) after cloning/uploading the repo.
 #
 # Cheap-path deploy: no ALB, no Auto Scaling, no API Gateway, no COOL AMI.
-# One t4g.small (Graviton/arm64) instance, stock Ubuntu, app in a venv, systemd keeps it up.
+# One small instance (x86_64 or arm64), stock Ubuntu 24.04, app in a venv, systemd keeps it up.
 # This still satisfies "a meaningful component on AWS" + "a working web endpoint" — it is
 # just the fast, cheap version. aws/infra/ (CDK) remains available for the fuller
 # ALB+ASG+COOL architecture if there is time later.
