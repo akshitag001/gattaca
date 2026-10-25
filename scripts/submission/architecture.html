@@ -1,0 +1,126 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1800px;height:auto;background:#fbfaf7;font-family:"Segoe UI",Inter,Arial,sans-serif;color:#1d1b17;padding:34px 40px}
+  h1{font-size:30px;font-weight:700;letter-spacing:-.01em}
+  .sub{font-size:16px;color:#6b6358;margin-top:4px}
+  .row{display:flex;gap:22px;align-items:stretch}
+  .box{border:2px solid #d8d2c6;border-radius:14px;background:#fff;padding:14px 16px}
+  .label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .user{width:230px;display:flex;flex-direction:column;justify-content:center;border-color:#9a9184}
+  .user .label{color:#6b6358}
+  .user p{font-size:15px;line-height:1.5}
+  .arrow{display:flex;align-items:center;font-size:15px;color:#6b6358;flex-direction:column;justify-content:center;width:110px;text-align:center}
+  .arrow b{font-size:34px;color:#9a9184;line-height:1}
+  .aws{flex:1;border:3px solid #ff9900;background:#fff8ee;border-radius:18px;padding:16px 18px}
+  .aws>.label{color:#c46f00}
+  .ec2{border:2px solid #e9a23b;background:#fff;border-radius:14px;padding:14px 16px}
+  .ec2>.label{color:#c46f00}
+  .svc{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+  .chip{font-size:13.5px;border:1.5px solid #d8d2c6;border-radius:999px;padding:4px 11px;background:#fbfaf7;font-family:Consolas,monospace}
+  .chip.off{color:#9a9184;text-decoration:line-through}
+  .cv{border:2px solid #5c3ee8;background:#f6f3ff;border-radius:12px;padding:12px 14px}
+  .cv>.label{color:#5c3ee8}
+  .stages{display:flex;gap:8px;align-items:stretch}
+  .st{flex:1;background:#fff;border:1.5px solid #c9bdfb;border-radius:10px;padding:8px 9px}
+  .st h4{font-size:14.5px;margin-bottom:4px}
+  .st p{font-size:12.2px;color:#4a4440;line-height:1.38;font-family:Consolas,monospace}
+  .sep{display:flex;align-items:center;color:#8f7ff0;font-weight:700}
+  .lower{display:flex;gap:14px;margin-top:12px}
+  .agent{flex:1.25;border:2px solid #2f8f6b;background:#f0faf5;border-radius:12px;padding:12px 14px}
+  .agent>.label{color:#1f7a57}
+  .loop{display:flex;gap:8px;align-items:center}
+  .lp{flex:1;background:#fff;border:1.5px solid #a7dcc6;border-radius:10px;padding:8px 10px}
+  .lp h4{font-size:14.5px;margin-bottom:3px}
+  .lp p{font-size:12.4px;color:#4a4440;line-height:1.38}
+  .back{font-size:12.5px;color:#1f7a57;margin-top:8px}
+  .video{flex:1;border:2px solid #5c3ee8;background:#f6f3ff;border-radius:12px;padding:12px 14px}
+  .video>.label{color:#5c3ee8}
+  .video p{font-size:13px;line-height:1.55;font-family:Consolas,monospace;color:#3a3530}
+  .data{margin-top:12px;display:flex;gap:14px}
+  .note{flex:1;font-size:13.5px;line-height:1.5;border:1.5px dashed #b9b0a2;border-radius:10px;padding:10px 12px;background:#fff}
+  .note b{color:#1d1b17}
+  .designed{margin-top:20px;border:2px dashed #b9b0a2;border-radius:14px;padding:12px 16px;background:#f4f1ea;display:flex;gap:20px;align-items:center}
+  .designed .label{color:#6b6358;margin:0;white-space:nowrap}
+  .designed p{font-size:14px;color:#4a4440;line-height:1.5}
+  .legend{margin-top:14px;display:flex;gap:22px;font-size:13px;color:#6b6358}
+  .sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
+</style></head>
+<body>
+  <h1>GATTACA — system architecture</h1>
+  <div class="sub">What is deployed and live at http://16.176.2.43:8000 · OpenCV 5.0.0 · AWS EC2 (ap-southeast-2)</div>
+
+  <div class="row" style="margin-top:22px">
+    <div class="box user">
+      <div class="label">User</div>
+      <p><b>Browser</b><br>photo upload, crop,<br>or live camera<br><br><b>Consent required</b><br>"this is my own hand"<br>(no consent → HTTP 400)</p>
+    </div>
+    <div class="arrow"><b>→</b>HTTP :8000<br>multipart upload</div>
+
+    <div class="aws">
+      <div class="label">AWS · ap-southeast-2 (Sydney)</div>
+      <div class="ec2">
+        <div class="label">EC2 instance · Ubuntu 24.04 · x86_64 · systemd → uvicorn → FastAPI (service/api.py)</div>
+        <div class="svc">
+          <span class="chip">GET /</span><span class="chip">POST /api/score</span><span class="chip">POST /api/protect</span><span class="chip">GET /health</span><span class="chip off">/api/minutiae</span><span style="font-size:13px;color:#6b6358;align-self:center">← 404 on the public host (research mode off)</span>
+        </div>
+
+        <div class="cv">
+          <div class="label">OpenCV 5 image pipeline (gattaca/pipeline) · runs on every request</div>
+          <div class="stages">
+            <div class="st"><h4>1 · Detect</h4><p>cv2.dnn ONNX<br>hand landmarks<br>+ convexityDefects<br>fallback</p></div>
+            <div class="sep">›</div>
+            <div class="st"><h4>2 · ROI + rectify</h4><p>Otsu mask, contours<br>warpPerspective<br>cylinder unwrap<br>(remap)</p></div>
+            <div class="sep">›</div>
+            <div class="st"><h4>3 · Measure PPRP</h4><p>whitened block FFT<br>+ finger-width<br>geometry<br>→ 9 px/ridge</p></div>
+            <div class="sep">›</div>
+            <div class="st"><h4>4 · Enhance</h4><p>createCLAHE<br>structure tensor<br>getGaborKernel bank<br>filter2D</p></div>
+            <div class="sep">›</div>
+            <div class="st"><h4>5 · Extract</h4><p>ximgproc.thinning<br>crossing number<br>minutiae (counts<br>only leave process)</p></div>
+            <div class="sep">›</div>
+            <div class="st"><h4>6 · Score</h4><p>clarity = fit ×<br>periodicity ×<br>coherence →<br>calibrated band</p></div>
+            <div class="sep">›</div>
+            <div class="st"><h4>7 · Evidence</h4><p>applyColorMap<br>blurred heat map<br>+ zoom callout<br>(no ridge image)</p></div>
+          </div>
+        </div>
+
+        <div class="lower">
+          <div class="agent">
+            <div class="label">Agentic loop (gattaca/agent) · video uploads</div>
+            <div class="loop">
+              <div class="lp"><h4>Perceive</h4><p>frame sharpness, ridge-band energy, exposure, motion + band, P, PPRP, clarity</p></div>
+              <div class="sep" style="color:#2f8f6b">›</div>
+              <div class="lp"><h4>Decide</h4><p>ordered rules R1–R8; each decision logs the measurement that triggered it</p></div>
+              <div class="sep" style="color:#2f8f6b">›</div>
+              <div class="lp"><h4>Act</h4><p>pull_frames · reselect_frame · retune_enhance · switch_finger · fuse_frames · stop</p></div>
+            </div>
+            <div class="back">↺ result feeds the next perception · human control: frame/step budgets, action allow-list, approve() before fusion, on_step() abort</div>
+          </div>
+          <div class="video">
+            <div class="label">OpenCV 5 video tools (gattaca/video)</div>
+            <p>VideoCapture decode<br>calcOpticalFlowPyrLK track<br>frame scoring + best-K select<br>findTransformECC sub-pixel align<br>kernel-regression multi-frame fuse</p>
+          </div>
+        </div>
+
+        <div class="data">
+          <div class="note"><b>Data handling:</b> images decoded in memory (cv2.imdecode); video temp file deleted in <code>finally:</code> (tested). Nothing persisted, no biometric logging. Every response carries the disclaimer.</div>
+          <div class="note"><b>Outputs:</b> risk band, probability, confidence, limiting factor, counts, blurred heat map. Never minutiae coordinates, templates or a clean ridge image.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="designed">
+    <div class="label">Designed · not deployed</div>
+    <p><b>aws/infra (CDK, synthesises to 50 resources):</b> API Gateway → ALB → Auto Scaling group of Graviton4 instances on the Cloud Optimized OpenCV (COOL) AMI, S3 for datasets/results. <b>aws/cool_benchmark:</b> COOL-on-Graviton vs stock-x86 harness. Neither was run, so the COOL award is not claimed.</p>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:#ff9900"></span>AWS</span>
+    <span><span class="sw" style="background:#5c3ee8"></span>OpenCV 5 workload</span>
+    <span><span class="sw" style="background:#2f8f6b"></span>Agent (perceive → decide → act)</span>
+    <span><span class="sw" style="background:#b9b0a2"></span>Designed, not deployed</span>
+    <span style="margin-left:auto">GATTACA is a privacy-awareness tool. It estimates exposure risk; it does not store biometrics or defeat security systems.</span>
+  </div>
+</body></html>
